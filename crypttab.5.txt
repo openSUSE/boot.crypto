@@ -1,0 +1,180 @@
+CRYPTTAB(5)
+===========
+
+NAME
+----
+crypttab - static information about crypted filesystems
+
+
+SYNOPSIS
+--------
+*crypttab*::
+'<target device>' '<source device>' '<key file>' '<options>'
+
+    
+DESCRIPTION
+-----------
+The file */etc/crypttab* contains descriptive informations about
+encrypted volumes. Each volume is described on a separate line;
+columns on each line are separated by tabs or spaces. Lines starting
+with "'#'" are comments, empty lines are ignored. The order of
+records in *crypttab* is important because the
+*/etc/init.d/boot.crypto* script sequentially iterates through
+*crypttab* entries. All four columns are mandatory, missing or
+excessive columns will lead to unspecified behaviour.
+
+- The first column, 'target device' specifies the mapped 'device
+name'. It must be a plain filename without any directories. A mapped
+device */dev/mapper/*'device name' will be created by
+*cryptsetup(8)* crypting data from and onto the 'source device'.
+
+To actually mount that device it needs to be listed in */etc/fstab*.
+
+- The second column 'source device' specifies the block special
+device that should hold the encrypted data.
+
+- The third column 'key file' specifies a file containing the raw
+binary key to use for decrypting the encrypted data of the 'source
+device'.
+
+The key file can also be a device name (e.g. */dev/urandom*, which
+is useful for encrypted swap devices). Warning: luks does not
+support infinite streams (like */dev/urandom*), it requires a fixed
+size key.
+
+If the 'key file' is the string *none*, the key data (i.e. a
+password or passphrase) will be read interactively from the console.
+In this case the options precheck, check, checkargs and tries may be
+useful.
+
+- The fourth field 'options' specifies the cryptsetup options
+associated with the encryption process. At minimum, the field should
+contain the string *luks* or the 'cipher', 'hash' and 'size'
+options.
+
+Options have to be specified in the format: 'key'='value'[,'key'='value' ...]
+
+
+OPTIONS
+-------
+
+*cipher*=<cipher>::
+Encryption algorithm. See *cryptsetup -c*.
+
+*size*=<size>::
+Encryption key size. See *cryptsetup -s*.
+
+*hash*=<hash>::
+Hash algorithm. See *cryptsetup -h*.
+
+*verify*::
+Verify password. See *cryptsetup -y*.
+
+*readonly*::
+The backing device is read-only (eg: a dvd).
+
+*luks*::
+Use device with luks extensions.
+
+*swap*::
+Run *mkswap* on the created device.
+
+*tmp*::
+Run *mkfs* on the created device. The file system to use is
+specified in */etc/fstab*. If */etc/fstab* does not list the mapped
+device, ext2 is used as fallback.
+
+*precheck*=<precheck>::
+Check the source device by suitable program; if the check fails the device is
+not created; <precheck> is a script to check the source device. The source
+device is given as argument to the script.
+
+*check*[=<program>]::
+Check the content of the mapped device by a suitable program; if the
+check fails the device is removed. The specified program is 
+run giving the decrypted volume (target device) as first and the
+value of the checkargs option as second argument. Cryptdisks
+searches for the given program in /lib/cryptsetup/checks/. If no
+program is specified, vol_id is used.
+
+*checkargs*=<argument>::
+Pass <argument> as second argument to the check script
+
+*tries*=<num>::
+Prompt for the passphrase at most <num> times if the entered
+passphrase was wrong. Defaults is 3. Only works for LUKS volumes.
+
+*timeout*=<sec>::
+Time out interactive password prompts after <sec> seconds.
+
+*loop*::
+Always attach a loop device before mapping the device. Normally a
+loop device is used automatically only for image files. Useful if
+the block size of the physical device does not match the block size
+of the contained file system. E.g. ext2 on a CD.
+
+*noauto*::
+Causes boot.crypto to skip this record during boot
+
+*pseed=<string>*::
+Set a string that is appended to the passphrase after hashing.
+Using different seeds for volumes with the same passphrase makes
+dictionary attacks harder. Use for compatability with loop-AES.
+
+*itercountk=<num>*::
+Encrypts the hashed password <num> thousand times using AES-256. Use
+for compatability with loop-AES.
+
+*loud*, *ssl*, *gpg*, *keyscript*::
+not supported. Listed here as they are supported by Debian.
+
+CHECKSCRIPTS
+------------
+TODO
+/////
+*vol_id*::
+Checks for any known filesystem. Supports a filesystem type as argument via
+<checkargs>:
+no checkargs - succeeds if any valid filesystem is found on the device.
+"none" - succeeds if no valid filesystem is found on the device.
+"ext3" [or any other filesystem type like xfs, swap, crypto_LUKS, whatever] - succeeds
+if an ext3 [or another given] filesystem type is found on the device.
+
+*ext3*::
+Checks for a valid ext2/ext3 filesystem.
+
+*xfs*::
+Checks for a valid xfs filesystem.
+
+*swap*::
+Checks for partition type 'swap'. Only useful as <precheck>.
+////
+
+EXAMPLES
+--------
+*Encrypted swap device*::
+cswap /dev/sda6 /dev/random swap
+
+*Encrypted luks volume with interactive password*::
+cdisk0 /dev/hda1 none luks
+
+*Encrypted luks volume with interactive password, use a custom check script, no retries*::
+cdisk2 /dev/hdc1 none luks,check=customscript,checkargs=foo,tries=1
+
+*Encrypted volume with interactive password and a cryptoloop compatible twofish256 cipher*::
+cdisk3 /dev/sda3 none cipher=twofish-cbc-plain,size=256,hash=sha512
+
+SEE ALSO
+--------
+cryptsetup(8), /etc/crypttab, fstab(8)
+
+
+AUTHOR
+------
+Manual page converted to asciidoc by Michael Gebetsroither
+<michael.geb@gmx.at>. Originally written by
+Bastian Kleineidam <calvin@debian.org> for the Debian distribution
+of cryptsetup. Improved by Jonas Meurer <jonas@freesources.org>.
+Modified for SUSE Linux by Ludwig Nussel <ludwig.nussel@suse.de>.
+Parts of this manual were taken and adapted from the fstab(5) manual
+page.

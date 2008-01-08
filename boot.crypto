@@ -1,0 +1,1073 @@
+#!/bin/bash
+# Copyright (C) 1996-2007 SUSE Linux Products GmbH, Nuernberg, Germany.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# Author:  Werner Fink <werner@suse.de>, 2001-2006
+#          Chris Rivera <crivera@novell.com> 2006
+#          Ludwig Nussel <lnussel@novell.com> 2007
+#
+# /etc/init.d/boot.crypto
+#
+### BEGIN INIT INFO
+# Provides:          boot.crypto
+# Required-Start:    boot.localfs boot.device-mapper
+# Should-Start:
+# Required-Stop:
+# Default-Start:     B
+# Default-Stop:
+# Description:       Enable crypto file systems before leaving boot phase
+# Short-Description: Enable crypto file systems before leaving boot phase
+### END INIT INFO
+
+# Determine the base and follow a runlevel link name.
+base=${0##*/}
+link=${base#*[SK][0-9][0-9]}
+
+. /etc/rc.status
+
+trap "echo" SIGINT SIGSEGV
+set +e
+
+# Redirect to real device (e.g. in case of boot logging)
+: ${CRYPTOTAB:=/etc/cryptotab}
+: ${CRYPTTAB:=/etc/crypttab}
+: ${TIMEOUT:=120}
+if test -z "$REDIRECT" ; then
+    if (echo -n > /dev/tty) 2>/dev/null ; then
+	REDIRECT=/dev/tty
+    else
+	REDIRECT=/dev/console
+    fi
+fi
+
+splash=""
+did_redirect=""
+otty=$(stty -g)
+redirect ()
+{
+    test -z "$did_redirect" || return 0
+    did_redirect=1
+    if test -e /proc/splash ; then
+	read splash  < /proc/splash
+	echo verbose > /proc/splash
+    fi
+    test -z "$otty" || stty "$otty" < $REDIRECT;
+    stty -nl -ixon ignbrk -brkint < $REDIRECT
+    if test -x /etc/init.d/kbd -a -n "$RUNLEVEL" ; then
+	# boot.cleanup runs after us and presence of this file prevents kbd
+	# from running
+	/bin/rm -f /var/run/keymap
+	/etc/init.d/kbd start
+    fi
+}
+
+restore ()
+{
+    test -n "$did_redirect" || return 0
+    test -z "$otty" || stty "$otty" < $REDIRECT;
+    [[ "$splash" =~ silent ]] && echo silent > /proc/splash
+}
+
+ppid=0
+prmt=""
+setprompt ()
+{
+    if test -t 1 -a "$TERM" != "raw" -a "$TERM" != "dumb" && stty size <&1 > /dev/null 2>&1
+    then
+	(
+	    trap "exit 0" SIGTERM
+	    trap "echo" SIGINT SIGSEGV
+	    usleep 15000
+	    while test $timeout -gt 0 ; do
+		# cursor to start of line, erase line, print prompt
+		echo -en "\r\e[2K${prmt}"
+		sleep 2
+		: $((timeout-=2))
+	    done
+	) & ppid=$!
+    else
+	usleep 15000
+	echo -en "\r${prmt}"
+	ppid=0
+    fi
+}
+
+unsetprompt ()
+{
+    local ret=$?
+    test $ppid -gt 0 && kill -15 $ppid
+    ppid=0
+    return $ret
+}
+
+reverse ()
+{
+    local _line
+    while read -r _line ; do
+	case "$_line" in \#*|"") continue ;; esac
+	reverse
+	echo "$_line"
+	break
+    done
+}
+
+detachloopdev ()
+{
+    if [ -n "$loopdev" ]; then
+	losetup -d $loopdev &> /dev/null || true
+    fi
+}
+
+#
+# Check for valid super blocks
+#
+check_superblock()
+{
+    local fs="$1"
+    local device="$2"
+    case "$fs" in
+	ext[23])  tune2fs -l $device    &> /dev/null ;;
+	reiserfs) debugreiserfs $device &> /dev/null ;;
+	*)        true ;;
+    esac
+}
+
+#
+# parameters: filesys device mountpoint physdev quiet
+# return value:
+# 0 - ok
+# 1 - enter passphrase again
+# 2 - skip entry
+# 3 - fsck
+#
+paranoid_safety_checks()
+{
+    local filesys device mp physdev quiet choice
+    filesys="$1"
+    device="$2"
+    mp="$3"
+    physdev="$4"
+    quiet="$5"
+
+    check_superblock "$filesys" "$device"
+
+    if test $? -gt 0 || ! mount -t "$filesys" -n -o ro "$device" "$mp" &> /dev/null ; then
+	umount -n "$mp" &> /dev/null || true
+	if test -n "$quiet"; then
+	    return 2
+	fi
+	echo "${warn}An error occurred. The passphrase may be wrong or the"
+	echo "file system on $physdev might be corrupted.${norm}"
+
+	while true ; do
+	    echo    "${extd}To check the file system, enter Check.${norm}"
+	    echo -n "${extd}Retry entering the passphrase?${norm}"
+	    choice=
+	    read -p " ([${extd}yes${norm}]/${extd}no${norm}/${extd}check${norm}/) " choice < $REDIRECT || { echo 'no'; choice='no'; }
+	    case "$choice" in
+		[yY][eE][sS]|[yY]|"")
+		    return 1 ;;
+		[nN][oO]|[nN])
+		    return 2 ;;
+		[Cc][hH][eE][Cc][kK]|[Cc])
+		    return 3 ;;
+	    esac
+	done
+    else
+	umount -n "$mp" &> /dev/null || true
+    fi
+
+    return 0
+}
+
+run_fsck()
+{
+    local filesys device mp physdev
+    filesys="$1"
+    device="$2"
+    mp="$3"
+    physdev="$4"
+    #
+    # Checking the structure on the loop device
+    #
+    # If we use a serial console, don't use the fsck progress bar
+    #
+    FSCK_PROGRESSBAR="-V"
+    [ -x /sbin/showconsole ] && [ "`/sbin/showconsole`" = "/dev/tty1" ] && FSCK_PROGRESSBAR="-C"
+    if test -x /sbin/fsck.$filesys; then
+	fsck $FSCK_PROGRESSBAR -T -a -t $filesys $device
+    else
+	true
+    fi
+    if test $? -gt 1; then
+	echo "${extd}fsck of $device failed.  Please repair manually.${norm}"
+	echo "${warn}Warning: do never try to repair if you have entered the wrong passphrase.${norm}"
+	# run sulogin only during boot
+	if test "$base" != "$link"; then
+	    PS1="(repair filesystem) # "
+	    /sbin/sulogin -t "$timeout" $REDIRECT < $REDIRECT > $REDIRECT 2>&1
+	    sync
+
+	    if ! paranoid_safety_checks "$filesys" "$device" "$mp" "$physdev" 'quiet'; then
+		echo "${extd}$physdev still appears to be damaged, skipping${norm}"
+		/sbin/cryptsetup remove $name || true
+		detachloopdev
+		return 1
+	    fi
+	else
+	    # leave the device set up so user can fun fsck manually
+	    return 1
+	fi
+    fi
+    return 0
+}
+
+report()
+{
+    rc_failed "$1"
+    shift
+    echo -n "$*"
+    rc_status -v
+}
+
+start_cryptotab ()
+{
+    local stat=0
+    local haveone=''
+    timeout="$TIMEOUT"
+
+    test -n "$tostart" || echo "Activating crypto devices using $CRYPTOTAB ... "
+    while read loopdev physdev access filesys crypto mopt info rest ; do
+	case "$loopdev" in
+	    \#*|"") continue ;;
+	esac
+
+	if test -n "$tostart" -a "$loopdev" != "$tostart" -a "$physdev" != "$tostart" -a "$access" != "$tostart"; then
+		continue
+	fi
+
+	haveone=1
+
+	redirect
+
+	# key length for cryptsetup
+	keylen=
+	ivgen='plain'
+	hashalgo='sha512'
+	name=
+	#
+
+	# Does the user want to skip current entry?
+	#
+	doskip=0
+	#
+	# Does the mount point exit?
+	#
+	if ! test -d $access ; then
+	    report 5 "$physdev: $access doesn't exist"
+	    continue
+	fi
+	if ! test -e $physdev ; then
+	    report 5 "$physdev doesn't exist"
+	    continue
+	fi
+	#
+	# Seeking for crypto modules
+	#
+	case "$crypto" in
+	    twofish)       keylen=192; ivgen='null'; hashalgo='ripemd160:20' ;;
+	    twofishSL92)   keylen=256; ivgen='null' ;;
+	    twofish[0-9]*) keylen=${crypto#twofish}; ;;
+	    #TODO add more algorithm or better detection
+	    *)
+		    report 2 "$physdev: unsupported algorithm \"$crypto\""
+		    continue
+		    ;;
+	esac
+	cipher=twofish-cbc-$ivgen
+
+	name="${loopdev#/dev/}"
+	name="cryptotab_${name//[^A-Za-z0-9]/_}"
+
+	if [ -e "/dev/mapper/$name" ]; then
+	    report 5 "$physdev: $name already mapped"
+	    continue
+	fi
+
+	while true; do # setup/check loop
+	    #
+	    # Restore virgin state
+	    #
+	    if [ -b "/dev/mapper/$name" ]; then
+		/sbin/cryptsetup remove $name || true
+	    fi
+	    detachloopdev
+	    device="$loopdev"
+
+	    #
+	    # Setting up loop device
+	    #
+	    if test -n "$info" ; then
+		prmt="${extd}Please enter passphrase for \"$info\" ($physdev): ${norm}"
+	    else
+		prmt="${extd}Please enter passphrase for $physdev: ${norm}"
+	    fi
+
+	    # we always use a loop device to avoid block size issues
+	    # with e.g. cdroms for backward compatability
+	    if ! losetup $loopdev $physdev; then
+		    report 1 "$physdev..."
+		    continue 2
+	    fi
+	    
+	    params="-t $timeout -c $cipher -s $keylen -h $hashalgo"
+
+	    setprompt
+	    /sbin/cryptsetup $params create "$name" "$device" < $REDIRECT > $REDIRECT 2>&1
+	    stat=$?
+	    unsetprompt
+
+	    if test "$stat" -ne 0; then
+		    detachloopdev
+		    report 1 "$physdev..."
+		    continue 2
+	    fi
+
+	    device="/dev/mapper/$name"
+
+	    paranoid_safety_checks "$filesys" "$device" "$access" "$physdev"
+	    stat="$?"
+	    if test "$stat" = 1; then # retype passphrase
+		continue
+	    elif test "$stat" = 2; then # skip entry
+		doskip=1
+	    fi
+	    break
+	done
+	#
+	# Does the user want to skip this entry?
+	#
+	if test $doskip -gt 0 ; then
+	    /sbin/cryptsetup remove $name || true
+	    report 5 "$physdev..."
+	    detachloopdev
+	    continue
+	fi
+
+	if ! run_fsck "$filesys" "$device" "$access" "$physdev"; then
+	    report 1 "$physdev..."
+	    continue
+	fi
+
+	case "$mopt" in
+	    default|"") mopt=""	;;
+	esac
+
+	mount -t $filesys ${mopt:+-o $mopt} $device $access
+	stat=$?
+	if test $stat -gt 0 ; then
+	    stat=1
+	    /sbin/cryptsetup remove $name || true
+	    detachloopdev
+	fi
+	report $stat "$physdev..."
+    done < $CRYPTOTAB
+
+    if test -z "$haveone" -a -z "$tostart"; then
+	rc_failed 6
+	rc_status -v1
+    fi
+}
+
+hashalotcryptsetup()
+{
+    /sbin/hashalot ${halgo:+$halgo} -t $timeout ${pseed:+-s $pseed} ${itercountk:+-C $itercountk} | /sbin/cryptsetup "$@"
+}
+
+start_crypttab ()
+{
+    local stat=0
+    local haveone=''
+
+    test -n "$tostart" || echo "Activating crypto devices using $CRYPTTAB ... "
+    while read name physdev keyfile options dummy; do
+	case "$name" in
+	\#*|"") continue ;;
+	esac
+
+	if test -n "$tostart" -a "$name" != "$tostart" -a "$physdev" != "$tostart"; then
+		continue
+	fi
+
+	haveone=1
+	redirect
+
+	# skip mapped entries
+	if test -e /dev/mapper/$name; then
+	    report 5 "$physdev: $name already mapped"
+	    continue
+	fi
+
+	test "$keyfile" = "none" && keyfile=""
+	test "$options" = "none" && options=""
+	
+	# make sure the keyfile exists
+	if test -n "$keyfile" -a ! -e "$keyfile"; then
+	    report 5 "$physdev: $keyfile does not exist"
+	    continue
+	fi
+	if ! test -e $physdev ; then
+	    report 5 "$physdev doesn't exist"
+	    continue
+	fi
+
+	# parse the options field
+	skip=""
+	params=""
+	makeswap=""
+	maketmp=""
+	noauto=""
+	luks=""
+	check=""
+	checkargs=""
+	loopdev=""
+	param_ro=""
+	cipher=""
+	keysize=""
+	halgo=""
+	timeout=""
+	tries=""
+	pseed=""
+	itercountk=""
+	while test -n "$options"; do
+	    arg=${options%%,*}
+	    options=${options##$arg}
+	    options=${options##,}
+	    param=${arg%%=*}
+	    value=${arg##$param=}
+
+	    case "$param" in
+	    cipher)
+		if test -z "$value" ; then
+		    echo $"$dst: no value for cipher option, skipping"
+		    skip="yes"
+		fi
+		cipher="$value"
+		;;
+	    size)
+		if test -z "$value" ; then
+		    echo $"$dst: no value for size option, skipping"
+		    skip="yes"
+		fi
+		keysize="$value"
+		;;
+	    hash)
+		if test -z "$value" ; then
+		    echo $"$dst: no value for hash option, skipping"
+		    skip="yes"
+		fi
+		halgo="$value"
+		;;
+	    verify) params="$params -y" ;;
+	    swap)   makeswap="yes" ;;
+	    tmp)    maketmp="yes" ;;
+	    noauto) noauto="yes" ;;
+	    luks)   luks="yes" ;;
+	    loop)   loopdev="yes" ;;
+	    readonly) param_ro="-r" ;;
+	    timeout)
+		case "$value" in
+		    [0-9]*) timeout="$value";;
+		    *) echo "invalid timeout '$value' ignored" ;;
+		esac
+		;;
+	    tries)
+		if test -n "$value" ; then
+		    params="$params --tries=$tries"
+		fi
+		;;
+	    check)
+		if test -n "$value" -a -x /lib/cryptsetup/checks/"$value" ; then
+		    check="/lib/cryptsetup/checks/$value"
+		else
+		    check="/lib/cryptsetup/checks/vol_id"
+		fi
+		;;
+	    checkargs)
+		if test -n "$value" ; then
+		    checkargs="$value"
+		fi
+		;;
+	    pseed) pseed="$value" ;;
+	    itercountk) itercountk="$value" ;;
+	    precheck|loud|ssl|gpg|keyscript|*)
+		echo "unsupported crypttab option: '$param'"
+		skip='yes'
+		;;
+	    esac
+	done
+
+	if test -n "$luks"; then
+	    if test -n "$cipher" -o -n "$halgo" -o -n "$keysize" -o -n "$pseed" -o -n "$itercountk"; then
+		echo "cipher, hash, size, pseed and itercountk options are ignored for LUKS"
+	    fi
+	fi
+	if test -n "$keyfile"; then
+	    if test -n "$halgo" -o -n "$pseed" -o -n "$itercountk"; then
+		report 2 "${ext}hash, pseed and itercountk options are invalid when using a key file${norm}"
+		continue
+	    fi
+	fi
+
+	if test "$skip" = "yes" -o \( "$noauto" = "yes" -a -z "$tostart" \); then
+	    report 5 "$physdev"
+	    continue
+	fi
+
+	if test -n "$param_ro"; then
+	    params="$params $param_ro"
+	fi
+
+	# we always want a timeout to prevent accidential hanging boot
+	if test -z "$timeout"; then
+	    timeout="$TIMEOUT"
+	fi
+	params="$params --timeout=$timeout"
+
+	device="$physdev"
+	# if device is a regular file then it's an image
+	if test -n "$loopdev" -o -f $device; then
+	    loopdev=''
+	    for i in 0 1 2 3 4 5 6 7; do
+		if ! test -b "/dev/loop$i"; then
+		    continue
+		fi
+
+		unset loopsize
+		read loopsize < /sys/block/loop$i/size
+		if test $? -eq 0 -a "$loopsize" = '0' && /sbin/losetup $param_ro "/dev/loop$i" $device; then
+		    device="/dev/loop$i"
+		    loopdev="$device"
+		    break
+		fi
+	    done
+
+	    if test -z "$loopdev"; then
+		report 1 "$physdev: failed to find a usable loop device"
+		continue
+	    fi
+	fi
+
+	doskip=0
+
+	while true; do # setup/check loop
+
+	    if [ -b "/dev/mapper/$name" ]; then
+		/sbin/cryptsetup remove $name
+	    fi
+
+	    if test -z "$keyfile"; then
+		prmt="${extd}Please enter passphrase for $physdev ($name): ${norm}"
+		setprompt
+	    fi
+
+	    # map the devices
+	    if test -n "$luks" || cryptsetup isLuks "$device" &> /dev/null; then
+		luks='yes'
+		/sbin/cryptsetup $params ${keyfile:+-d $keyfile} luksOpen "$device" "$name" < $REDIRECT &> $REDIRECT
+		stat=$?
+	    else
+		# XXX hack
+		if test -n "$pseed" -o -n "$itercountk"; then
+		    params="$params -d /dev/stdin" # cannot use "-" as cryptsetup would hash that
+		    cryptsetup=hashalotcryptsetup
+		else
+		    cryptsetup=/sbin/cryptsetup
+		fi
+		params="$params ${cipher:+-c $cipher} ${halgo:+-h $halgo} ${keysize:+-s $keysize}"
+		$cryptsetup $params ${keyfile:+-d $keyfile} create "$name" "$device" < $REDIRECT &> $REDIRECT
+		stat=$?
+		unset cryptsetup
+	    fi
+	    if test -z "$keyfile"; then
+		unsetprompt
+	    fi
+
+	    if test $stat -ne 0; then
+		report 1 "$physdev... "
+		doskip=1
+		detachloopdev
+		break
+	    fi
+
+	    # run check if it's set
+	    if test -n "$check"; then
+		$check "/dev/mapper/$name" $checkargs
+		if test $? -ne 0; then
+		    report 1 "$physdev... "
+		    doskip=1
+		    /sbin/cryptsetup remove $name
+		    detachloopdev
+		    break
+		fi
+	    fi
+
+	    mountpoint=''
+	    fs_type='auto'
+	    infstab=''
+	    read dummy mountpoint fs_type dummy < <(/bin/awk -vd=/dev/mapper/$name '$1==d{print;exit}' < /etc/fstab)
+	    if test "$?" -eq 0; then
+		infstab='yes'
+	    fi
+
+	    # run mkfs if the tmp option was given
+	    if test "$maketmp" = "yes"; then
+		echo "Creating filesystem on /dev/mapper/$name..."
+		if test "$fs_type" = 'auto'; then
+		    fs_type='ext2'
+		fi
+		/sbin/mkfs -t "$fs_type" /dev/mapper/$name
+
+		if test $? -ne 0; then
+		    report 1 "$phsdev: failed to create temporary file system."
+		    doskip=1
+		    /sbin/cryptsetup remove $name
+		    detachloopdev
+		    break
+		fi
+	    fi
+
+	    # no need for paranoid checks with luks as cryptsetup is able to
+	    # verify the passphrase itself then
+	    #
+	    # if the device is not in fstab we can't do paranoid checks as we
+	    # don't know what the intention of the device is
+	    if test "$makeswap" != 'yes' -a -z "$luks" -a -n "$infstab"; then
+		if test -z "$luks"; then
+		    paranoid_safety_checks "$fs_type" "/dev/mapper/$name" "$mountpoint" "$physdev"
+		    stat="$?"
+		    if test "$stat" = 1; then # retype passphrase
+			continue
+		    elif test "$stat" = 2; then # skip entry
+			report 5 "$physdev..."
+			doskip=1
+		    fi
+		fi
+	    fi
+
+	    break;
+	done # setup/check loop
+
+	if test "$doskip" -gt 0; then
+	    if test -b "/dev/mapper/$name"; then
+		/sbin/cryptsetup remove "$name"
+	    fi
+	    detachloopdev
+	    continue
+	fi
+
+	# run mkswap if necessary. boot.swap with enable this later
+	if test "$makeswap" = "yes"; then
+	    mkswap "/dev/mapper/$name"
+	    stat="$?"
+	    test $stat -eq 0 || stat=1
+	    report $stat "$physdev..."
+	    continue
+	fi
+
+	if test -z "$infstab"; then
+	    report 0 "$physdev..."
+	    continue
+	fi
+
+	if ! run_fsck "$fs_type" "/dev/mapper/$name" "$mp" "$physdev"; then
+	    report 1 "$physdev..."
+	    continue
+	fi
+
+	mount /dev/mapper/$name
+	stat="$?"
+
+	if test $stat -gt 0 ; then
+	    stat=1
+	    /sbin/cryptsetup remove $name || true
+	    detachloopdev
+	fi
+
+	# set permissions for tmp dirs
+	if test "$maketmp" = "yes"; then
+	    chmod 1777 $mountpoint
+	fi
+
+	report $stat "$physdev..."
+
+    done < $CRYPTTAB
+    if test -z "$haveone" -a -z "$tostart"; then
+	rc_failed 6
+	rc_status -v1
+    fi
+}
+
+umount_or_swapoff()
+{
+    # unmount device
+    if /bin/grep -q "^/dev/mapper/$name[ \t]" /proc/mounts; then
+	umount "/dev/mapper/$name"
+	if test $? -gt 0 ; then
+	    return 1
+	fi
+    elif /bin/grep -q "^/dev/mapper/$name[ \t]" /proc/swaps; then
+	swapoff "/dev/mapper/$name"
+	if test $? -gt 0 ; then
+	    return 1
+	fi
+    fi
+
+    return 0
+}
+
+
+stop_cryptotab ()
+{
+    local haveone=''
+
+    test -n "$tostop" || echo "Turning off crypto devices using $CRYPTOTAB ... "
+
+    while read loopdev physdev access filesys crypto mopt rest ; do
+	case "$loopdev" in
+	    \#*|"") continue ;;
+	esac
+
+	if test -n "$tostop" -a "$loopdev" != "$tostop" -a "$physdev" != "$tostop" -a "$access" != "$tostop"; then
+		continue
+	fi
+
+	haveone=1
+
+	name="${loopdev#/dev/}"
+	name="cryptotab_${name//[^A-Za-z0-9]/_}"
+
+	if test -b "/dev/mapper/$name"; then
+
+	    if ! umount_or_swapoff; then
+		report 1 "$physdev..."
+		continue
+	    fi
+
+	    cryptsetup remove "$name" || rc_failed 1
+	fi
+
+	if losetup $loopdev >/dev/null 2>&1; then
+	    losetup -d $loopdev || rc_failed 1
+	fi
+
+	echo -n "$physdev..."
+	rc_status -v
+
+    done < <(reverse < $CRYPTOTAB)
+    
+    if test -z "$haveone" -a -z "$tostop"; then
+	rc_status -v1
+    fi
+}
+
+stop_crypttab ()
+{
+    local haveone=''
+
+    test -n "$tostop" || echo "Turning off crypto devices using $CRYPTTAB ... "
+
+    while read name physdev keyfile options dummy; do
+	case "$name" in
+	\#*|"") continue ;;
+	esac
+
+	if test -n "$tostop" -a "$name" != "$tostop" -a "$physdev" != "$tostop"; then
+		continue
+	fi
+
+	haveone=1
+
+	loopdev=""
+	device="$physdev"
+
+	if test -b "/dev/mapper/$name"; then
+	    if ! umount_or_swapoff; then
+		report 1 "$physdev..."
+		continue
+	    fi
+
+	    /sbin/cryptsetup remove "$name" || rc_failed 1
+	fi
+
+	# delete the loop device
+	while read line; do
+	    case "$line" in
+	    *\(${physdev}\)*) device=${line%%:*}; loopdev='yes' ;;
+	    esac
+	done < <(/sbin/losetup -a)
+
+	if test -n "$loopdev" && losetup $device >/dev/null 2>&1; then
+	    /sbin/losetup -d $device || rc_failed 1
+	fi
+
+	echo -n "$physdev..."
+	rc_status -v
+
+    done < <(reverse < $CRYPTTAB)
+
+    if test -z "$haveone" -a -z "$tostop"; then
+	rc_status -v1
+    fi
+}
+
+status_cryptotab()
+{
+    local state str
+    local haveone=''
+    while read loopdev physdev access filesys crypto mopt info rest ; do
+	case "$loopdev" in
+	    \#*|"") continue ;;
+	esac
+
+	haveone=1
+
+	name="${loopdev#/dev/}"
+	name="cryptotab_${name//[^A-Za-z0-9]/_}"
+
+	echo -n "$physdev"
+	state=0
+	str=''
+
+	if losetup "$loopdev" > /dev/null 2>&1; then
+	    str="$str ${loopdev#/dev/}"
+	    state=$((state+1))
+	fi
+	if test -b "/dev/mapper/$name"; then
+	    str="$str mapped"
+	    state=$((state+1))
+	fi
+	if /bin/grep -q "^/dev/mapper/$name[ \t]" /proc/mounts; then
+	    str="$str mounted"
+	    state=$((state+1))
+	fi
+
+	if test "$state" = 3; then
+	    rc_failed 0
+	elif test "$state" != 0; then 
+	    rc_failed 4
+	else
+	    rc_failed 3
+	fi
+
+	if test -n "$str"; then
+	    echo -n " [$str ]"
+	fi
+	rc_status -v
+
+    done < $CRYPTOTAB
+
+    if test -z "$haveone"; then
+	report 3 "$CRYPTOTAB"
+    fi
+}
+
+status_crypttab()
+{
+    local state str
+    local haveone=''
+
+    while read name physdev keyfile options dummy; do
+	case "$name" in
+	\#*|"") continue ;;
+	esac
+
+	haveone=1
+
+	echo -n "$physdev"
+	state=0
+	str=''
+
+	loopdev=''
+	# find the loop device
+	while read line; do
+	    case "$line" in
+	    *\(${physdev}\)*) loopdev=${line%%:*};;
+	    esac
+	done < <(/sbin/losetup -a)
+
+	if test -n "$loopdev" && losetup "$loopdev" > /dev/null 2>&1; then
+	    str="$str ${loopdev#/dev/}"
+	    state=$((state|1))
+	fi
+	if test -b "/dev/mapper/$name"; then
+	    str="$str mapped"
+	    state=$((state|2))
+	fi
+	if /bin/grep -q "^/dev/mapper/$name[ \t]" /proc/mounts; then
+	    str="$str mounted"
+	    state=$((state|4))
+	elif /bin/grep -q "^/dev/mapper/$name[ \t]" /proc/swaps; then
+	    str="$str swap"
+	    state=$((state|4))
+	fi
+
+	if test -n "$str"; then
+	    echo -n " [$str ]"
+	fi
+	if test "$state" != 0; then
+	    if test $((state&2)) = 0; then
+		rc_failed 4
+	    else
+		if ! test -e "$physdev"; then
+		    rc_failed 1
+		else
+		    rc_failed 0
+		fi
+	    fi
+	else
+	    rc_failed 3
+	fi
+	rc_status -v
+
+    done < $CRYPTTAB
+
+    if test -z "$haveone"; then
+	report 3 "$CRYPTTAB"
+    fi
+}
+
+#
+# Cutomize_{start,stop}_hook are for interactive usage only
+#
+cutomize_start_hook ()
+{
+    local srv
+
+    test "$base" != "$link"             && return 0
+    test -s /etc/sysconfig/boot.crypto  || return 0
+    . /etc/sysconfig/boot.crypto
+
+    for srv in $TRY_RESTART_AT_START ; do
+	test -n "$srv" || break
+	test -x /etc/init.d/$srv || continue
+	/etc/init.d/$srv try-restart
+    done
+
+    for srv in $RESTART_AT_START ; do
+	test -n "$srv" || break
+	test -x /etc/init.d/$srv || continue
+	/etc/init.d/$srv restart
+    done
+
+    for srv in $RELOAD_AT_START ; do
+        test -n "$srv" || break
+        test -x /etc/init.d/$srv || continue
+        /etc/init.d/$srv reload
+    done
+}
+
+cutomize_stop_hook ()
+{
+    local srv
+
+    test "$base" != "$link"             && return 0
+    test -s /etc/sysconfig/boot.crypto  || return 0
+    . /etc/sysconfig/boot.crypto
+
+    for srv in $TRY_RESTART_AT_STOP ; do
+	test -n "$srv" || break
+	test -x /etc/init.d/$srv || continue
+	/etc/init.d/$srv try-restart
+    done
+
+    for srv in $RESTART_AT_STOP ; do
+	test -n "$srv" || break
+	test -x /etc/init.d/$srv || continue
+	/etc/init.d/$srv restart
+    done
+
+    for srv in $RELOAD_AT_STOP ; do
+	test -n "$srv" || break
+	test -x /etc/init.d/$srv || continue
+	/etc/init.d/$srv reload
+    done
+}
+
+rc_reset
+case "$1" in
+    start|b)
+
+	if ! /sbin/modprobe -q dm-crypt; then
+	    echo "kernel lacks dm-crypt support"
+	    rc_failed 5
+	    rc_status -v
+	    rc_exit
+	fi
+
+	tostart="$2"
+
+	if test -s $CRYPTOTAB; then
+	    start_cryptotab
+	fi
+
+	if test -s $CRYPTTAB; then
+	    start_crypttab
+	fi
+
+	rc_failed 0
+
+	restore
+
+	cutomize_start_hook
+	;;
+    stop)
+
+	tostop="$2"
+
+	if test -s $CRYPTOTAB; then
+	    stop_cryptotab
+	fi
+
+	if test -s $CRYPTTAB; then
+	    stop_crypttab
+	fi
+
+	rc_failed 0
+
+	cutomize_stop_hook
+	;;
+    status)
+	if test -s $CRYPTOTAB; then
+	    status_cryptotab
+	fi
+
+	if test -s $CRYPTTAB; then
+	    status_crypttab
+	fi
+	rc_failed 0
+	;;
+    restart)
+	$0 stop
+	$0 start
+	rc_status
+	;;
+    *)
+	echo "Usage: $0 {start|stop|status|restart}"
+	exit 1
+	;;
+esac
+rc_exit
