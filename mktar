@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+NAME=boot.crypto
+VERSION=0
+DATE=`date +%Y%m%d%H%M`
+fn=$NAME-${VERSION}_$DATE.tar.bz2
+git archive --prefix=$NAME-${VERSION}_$DATE/ HEAD | bzip2 > $fn
+echo "version ${VERSION}_$DATE -> $fn"
