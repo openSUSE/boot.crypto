@@ -98,6 +98,7 @@ setprompt ()
 		: $((timeout-=2))
 	    done
 	) & ppid=$!
+	trap unsetprompt EXIT
     else
 	usleep 15000
 	echo -en "\r${prmt}"
