@@ -1,0 +1,27 @@
+#!/bin/bash
+# script inspired by debian's
+
+# usage: vol_id <device> <fs_type>
+# <device> may be any device that should be checked.
+# if no <fs_type> is given, the check fails if no valid filesystem is found.
+# if <fs_type> is given, the check fails when no filesystem type <fs_type>
+# is found on the device. if <fs_type> is 'none', the check fails if any
+# know filesystem is found.
+
+dev="$1"
+fs="$2"
+
+str=`/lib/udev/vol_id -t "$dev" 2>&1`
+if [ "$?" -ne 0 ]; then
+	if [ "$str" = "$dev: unknown volume type" -a "$fs" = 'none' ]; then
+		exit 0
+	fi
+	echo " - error determining file system for device $dev " >&2
+	exit 1
+else
+	if [ -z "$fs" -o "$fs" = "$str" ]; then
+		exit 0
+	fi
+	echo " - the device $dev contains file system '$str', expected '$fs'" >&2
+	exit 1
+fi
