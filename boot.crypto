@@ -164,11 +164,7 @@ paranoid_safety_checks()
 
     check_superblock "$filesys" "$device"
 
-    if test $? -gt 0 || ! mount -t "$filesys" -n -o ro "$device" "$mp" &> /dev/null ; then
-	umount -n "$mp" &> /dev/null || true
-	if test -n "$quiet"; then
-	    return 2
-	fi
+    if test $? -gt 0; then
 	echo "${warn}An error occurred. The passphrase may be wrong or the"
 	echo "file system on $physdev might be corrupted.${norm}"
 
@@ -186,8 +182,6 @@ paranoid_safety_checks()
 		    return 3 ;;
 	    esac
 	done
-    else
-	umount -n "$mp" &> /dev/null || true
     fi
 
     return 0
