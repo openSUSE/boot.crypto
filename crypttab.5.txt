@@ -9,7 +9,7 @@ crypttab - static information about crypted filesystems
 SYNOPSIS
 --------
 *crypttab*::
-'<target device>' '<source device>' '<key file>' '<options>'
+'NAME' 'DEVICE' 'KEY' 'OPTIONS'
 
     
 DESCRIPTION
@@ -23,35 +23,35 @@ records in *crypttab* is important because the
 *crypttab* entries. All four columns are mandatory, missing or
 excessive columns will lead to unspecified behaviour.
 
-- The first column, 'target device' specifies the mapped 'device
+- The first column, 'NAME' specifies the mapped 'device
 name'. It must be a plain filename without any directories. A mapped
-device */dev/mapper/*'device name' will be created by
-*cryptsetup(8)* crypting data from and onto the 'source device'.
-
+device */dev/mapper/*'NAME' will be created by
+*cryptsetup(8)* crypting data from and onto the 'DEVICE'.
++
 To actually mount that device it needs to be listed in */etc/fstab*.
 
-- The second column 'source device' specifies the block special
+- The second column 'DEVICE' specifies the block special
 device that should hold the encrypted data.
 
-- The third column 'key file' specifies a file containing the raw
-binary key to use for decrypting the encrypted data of the 'source
-device'.
-
-The key file can also be a device name (e.g. */dev/urandom*, which
-is useful for encrypted swap devices). Warning: luks does not
-support infinite streams (like */dev/urandom*), it requires a fixed
-size key.
-
-If the 'key file' is the string *none*, the key data (i.e. a
-password or passphrase) will be read interactively from the console.
-In this case the options precheck, check, checkargs and tries may be
+- The third column 'KEY' specifies a file containing the raw
+binary key to use for decrypting the encrypted data of 'DEVICE'. The
+key file can also be a device name (e.g. */dev/urandom*, which is
+useful for encrypted swap devices).
++
+If 'KEY' is the string *none*, the key data (i.e. a password or
+passphrase) will be read interactively from the console. In this
+case the options precheck, check, checkargs and tries may be
 useful.
++
+Warning: luks does not support infinite streams (like
+*/dev/urandom*), it requires a fixed size key. Typically one uses
+*none* for luks.
 
-- The fourth field 'options' specifies the cryptsetup options
+- The fourth field 'OPTIONS' specifies the cryptsetup options
 associated with the encryption process. At minimum, the field should
 contain the string *luks* or the 'cipher', 'hash' and 'size'
 options.
-
++
 Options have to be specified in the format: 'key'='value'[,'key'='value' ...]
 
 
@@ -84,21 +84,22 @@ Run *mkfs* on the created device. The file system to use is
 specified in */etc/fstab*. If */etc/fstab* does not list the mapped
 device, ext2 is used as fallback.
 
-*precheck*=<precheck>::
-Check the source device by suitable program; if the check fails the device is
-not created; <precheck> is a script to check the source device. The source
-device is given as argument to the script.
-
 *check*[=<program>]::
 Check the content of the mapped device by a suitable program; if the
 check fails the device is removed. The specified program is 
-run giving the decrypted volume (target device) as first and the
+run giving the decrypted volume (/dev/mapper/NAME) as first and the
 value of the checkargs option as second argument. Cryptdisks
 searches for the given program in /lib/cryptsetup/checks/. If no
 program is specified, vol_id is used.
 
 *checkargs*=<argument>::
 Pass <argument> as second argument to the check script
+
+*precheck*=<program>::
+Check the source device by suitable program; if the check fails the
+device is not created; <precheck> is a script to check the source
+device. The source device is given as argument to the script. See
+also the *check* option.
 
 *tries*=<num>::
 Prompt for the passphrase at most <num> times if the entered
