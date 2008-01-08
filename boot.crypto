@@ -446,6 +446,7 @@ start_crypttab ()
 	tries=""
 	pseed=""
 	itercountk=""
+	precheck=""
 	while test -n "$options"; do
 	    arg=${options%%,*}
 	    options=${options##$arg}
@@ -507,7 +508,12 @@ start_crypttab ()
 		;;
 	    pseed) pseed="$value" ;;
 	    itercountk) itercountk="$value" ;;
-	    precheck|loud|ssl|gpg|keyscript|*)
+	    precheck)
+		if test -n "$value" -a -x /lib/cryptsetup/checks/"$value" ; then
+		    precheck="/lib/cryptsetup/checks/$value"
+		fi
+		;;
+	    loud|ssl|gpg|keyscript|*)
 		echo "unsupported crypttab option: '$param'"
 		skip='yes'
 		;;
@@ -529,6 +535,15 @@ start_crypttab ()
 	if test "$skip" = "yes" -o \( "$noauto" = "yes" -a -z "$tostart" \); then
 	    report 5 "$physdev"
 	    continue
+	fi
+
+	# run precheck if it's set
+	if test -n "$precheck"; then
+	    $precheck "$physdev"
+	    if test $? -ne 0; then
+		report 1 "$physdev... "
+		continue
+	    fi
 	fi
 
 	if test -n "$param_ro"; then
