@@ -1,0 +1,217 @@
+.\"     Title: crypttab
+.\"    Author: 
+.\" Generator: DocBook XSL Stylesheets v1.73.1 <http://docbook.sf.net/>
+.\"      Date: 01/08/2008
+.\"    Manual: 
+.\"    Source: 
+.\"
+.TH "CRYPTTAB" "5" "01/08/2008" "" ""
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.SH "NAME"
+crypttab - static information about crypted filesystems
+.SH "SYNOPSIS"
+.PP
+\fBcrypttab\fR
+.RS 4
+
+\fINAME\fR
+\fIDEVICE\fR
+\fIKEY\fR
+\fIOPTIONS\fR
+.RE
+.SH "DESCRIPTION"
+The file \fB/etc/crypttab\fR contains descriptive informations about encrypted volumes\. Each volume is described on a separate line; columns on each line are separated by tabs or spaces\. Lines starting with "\fI#\fR" are comments, empty lines are ignored\. The order of records in \fBcrypttab\fR is important because the \fB/etc/init\.d/boot\.crypto\fR script sequentially iterates through \fBcrypttab\fR entries\. All four columns are mandatory, missing or excessive columns will lead to unspecified behaviour\.
+.sp
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'The first column,
+\fINAME\fR
+specifies the mapped
+\fIdevice name\fR\. It must be a plain filename without any directories\. A mapped device
+\fB/dev/mapper/\fR\fINAME\fR
+will be created by
+\fBcryptsetup(8)\fR
+crypting data from and onto the
+\fIDEVICE\fR\.
+.sp
+To actually mount that device it needs to be listed in
+\fB/etc/fstab\fR\.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'The second column
+\fIDEVICE\fR
+specifies the block special device that should hold the encrypted data\.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'The third column
+\fIKEY\fR
+specifies a file containing the raw binary key to use for decrypting the encrypted data of
+\fIDEVICE\fR\. The key file can also be a device name (e\.g\.
+\fB/dev/urandom\fR, which is useful for encrypted swap devices)\.
+.sp
+If
+\fIKEY\fR
+is the string
+\fBnone\fR, the key data (i\.e\. a password or passphrase) will be read interactively from the console\. In this case the options precheck, check, checkargs and tries may be useful\.
+.sp
+Warning: luks does not support infinite streams (like
+\fB/dev/urandom\fR), it requires a fixed size key\. Typically one uses
+\fBnone\fR
+for luks\.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+03'The fourth field
+\fIOPTIONS\fR
+specifies the cryptsetup options associated with the encryption process\. At minimum, the field should contain the string
+\fBluks\fR
+or the
+\fIcipher\fR,
+\fIhash\fR
+and
+\fIsize\fR
+options\.
+.sp
+Options have to be specified in the format:
+\fIkey\fR=\fIvalue\fR[,\fIkey\fR=\fIvalue\fR
+\&...]
+.RE
+.SH "OPTIONS"
+.PP
+\fBcipher\fR=<cipher>
+.RS 4
+Encryption algorithm\. See
+\fBcryptsetup \-c\fR\.
+.RE
+.PP
+\fBsize\fR=<size>
+.RS 4
+Encryption key size\. See
+\fBcryptsetup \-s\fR\.
+.RE
+.PP
+\fBhash\fR=<hash>
+.RS 4
+Hash algorithm\. See
+\fBcryptsetup \-h\fR\.
+.RE
+.PP
+\fBverify\fR
+.RS 4
+Verify password\. See
+\fBcryptsetup \-y\fR\.
+.RE
+.PP
+\fBreadonly\fR
+.RS 4
+The backing device is read\-only (eg: a dvd)\.
+.RE
+.PP
+\fBluks\fR
+.RS 4
+Use device with luks extensions\.
+.RE
+.PP
+\fBswap\fR
+.RS 4
+Run
+\fBmkswap\fR
+on the created device\.
+.RE
+.PP
+\fBtmp\fR
+.RS 4
+Run
+\fBmkfs\fR
+on the created device\. The file system to use is specified in
+\fB/etc/fstab\fR\. If
+\fB/etc/fstab\fR
+does not list the mapped device, ext2 is used as fallback\.
+.RE
+.PP
+\fBcheck\fR[=<program>]
+.RS 4
+Check the content of the mapped device by a suitable program; if the check fails the device is removed\. The specified program is run giving the decrypted volume (/dev/mapper/NAME) as first and the value of the checkargs option as second argument\. Cryptdisks searches for the given program in /lib/cryptsetup/checks/\. If no program is specified, vol_id is used\.
+.RE
+.PP
+\fBcheckargs\fR=<argument>
+.RS 4
+Pass <argument> as second argument to the check script
+.RE
+.PP
+\fBprecheck\fR=<program>
+.RS 4
+Check the source device by suitable program; if the check fails the device is not created; <precheck> is a script to check the source device\. The source device is given as argument to the script\. See also the
+\fBcheck\fR
+option\.
+.RE
+.PP
+\fBtries\fR=<num>
+.RS 4
+Prompt for the passphrase at most <num> times if the entered passphrase was wrong\. Defaults is 3\. Only works for LUKS volumes\.
+.RE
+.PP
+\fBtimeout\fR=<sec>
+.RS 4
+Time out interactive password prompts after <sec> seconds\.
+.RE
+.PP
+\fBloop\fR
+.RS 4
+Always attach a loop device before mapping the device\. Normally a loop device is used automatically only for image files\. Useful if the block size of the physical device does not match the block size of the contained file system\. E\.g\. ext2 on a CD\.
+.RE
+.PP
+\fBnoauto\fR
+.RS 4
+Causes boot\.crypto to skip this record during boot
+.RE
+.PP
+\fBpseed=<string>\fR
+.RS 4
+Set a string that is appended to the passphrase after hashing\. Using different seeds for volumes with the same passphrase makes dictionary attacks harder\. Use for compatability with loop\-AES\.
+.RE
+.PP
+\fBitercountk=<num>\fR
+.RS 4
+Encrypts the hashed password <num> thousand times using AES\-256\. Use for compatability with loop\-AES\.
+.RE
+.PP
+\fBloud\fR, \fBssl\fR, \fBgpg\fR, \fBkeyscript\fR
+.RS 4
+not supported\. Listed here as they are supported by Debian\.
+.RE
+.SH "CHECKSCRIPTS"
+TODO
+.sp
+.SH "EXAMPLES"
+.PP
+\fBEncrypted swap device\fR
+.RS 4
+cswap /dev/sda6 /dev/random swap
+.RE
+.PP
+\fBEncrypted luks volume with interactive password\fR
+.RS 4
+cdisk0 /dev/hda1 none luks
+.RE
+.PP
+\fBEncrypted luks volume with interactive password, use a custom check script, no retries\fR
+.RS 4
+cdisk2 /dev/hdc1 none luks,check=customscript,checkargs=foo,tries=1
+.RE
+.PP
+\fBEncrypted volume with interactive password and a cryptoloop compatible twofish256 cipher\fR
+.RS 4
+cdisk3 /dev/sda3 none cipher=twofish\-cbc\-plain,size=256,hash=sha512
+.RE
+.SH "SEE ALSO"
+cryptsetup(8), /etc/crypttab, fstab(8)
+.sp
+.SH "AUTHOR"
+Manual page converted to asciidoc by Michael Gebetsroither <michael\.geb@gmx\.at>\. Originally written by Bastian Kleineidam <calvin@debian\.org> for the Debian distribution of cryptsetup\. Improved by Jonas Meurer <jonas@freesources\.org>\. Modified for SUSE Linux by Ludwig Nussel <ludwig\.nussel@suse\.de>\. Parts of this manual were taken and adapted from the fstab(5) manual page\.
+.sp
