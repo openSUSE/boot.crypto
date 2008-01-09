@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 1996-2007 SUSE Linux Products GmbH, Nuernberg, Germany.
+# Copyright (C) 1996-2008 SUSE Linux Products GmbH, Nuernberg, Germany.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -250,7 +250,15 @@ start_cryptotab ()
 	    \#*|"") continue ;;
 	esac
 
-	if test -n "$tostart" -a "$loopdev" != "$tostart" -a "$physdev" != "$tostart" -a "$access" != "$tostart"; then
+	name="${loopdev#/dev/}"
+	name="cryptotab_${name//[^A-Za-z0-9]/_}"
+
+	if test -n "$tostart" \
+	    -a "$loopdev" != "$tostart" \
+	    -a "$physdev" != "$tostart" \
+	    -a "$name" != "$tostart" \
+	    -a "/dev/mapper/$name" != "$tostart" \
+	    -a "$access" != "$tostart"; then
 		continue
 	fi
 
@@ -262,7 +270,6 @@ start_cryptotab ()
 	keylen=
 	ivgen='plain'
 	hashalgo='sha512'
-	name=
 	#
 
 	# Does the user want to skip current entry?
@@ -293,9 +300,6 @@ start_cryptotab ()
 		    ;;
 	esac
 	cipher=twofish-cbc-$ivgen
-
-	name="${loopdev#/dev/}"
-	name="cryptotab_${name//[^A-Za-z0-9]/_}"
 
 	if [ -e "/dev/mapper/$name" ]; then
 	    report 5 "$physdev: $name already mapped"
@@ -385,6 +389,8 @@ start_cryptotab ()
 	rc_failed 6
 	rc_status -v1
     fi
+
+    test -z "$haveone" || foundit="$haveone"
 }
 
 hashalotcryptsetup()
@@ -398,12 +404,23 @@ start_crypttab ()
     local haveone=''
 
     test -n "$tostart" || echo "Activating crypto devices using $CRYPTTAB ... "
+
+    if test -n "$tostart" -a "${tostart:0:1}" = '/'; then
+	read name < <(awk -vd="$tostart" '$2==d{print $1}' < /etc/fstab)
+	if test "$?" -eq 0; then
+	    tostart="$name"
+	fi
+    fi
+
     while read name physdev keyfile options dummy; do
 	case "$name" in
 	\#*|"") continue ;;
 	esac
 
-	if test -n "$tostart" -a "$name" != "$tostart" -a "$physdev" != "$tostart"; then
+	if test -n "$tostart" \
+	    -a "$name" != "$tostart" \
+	    -a "/dev/mapper/$name" != "$tostart" \
+	    -a "$physdev" != "$tostart"; then
 		continue
 	fi
 
@@ -729,6 +746,8 @@ start_crypttab ()
 	rc_failed 6
 	rc_status -v1
     fi
+
+    test -z "$haveone" || foundit="$haveone"
 }
 
 umount_or_swapoff()
@@ -761,14 +780,19 @@ stop_cryptotab ()
 	    \#*|"") continue ;;
 	esac
 
-	if test -n "$tostop" -a "$loopdev" != "$tostop" -a "$physdev" != "$tostop" -a "$access" != "$tostop"; then
+	name="${loopdev#/dev/}"
+	name="cryptotab_${name//[^A-Za-z0-9]/_}"
+
+	if test -n "$tostop" \
+	    -a "$loopdev" != "$tostop" \
+	    -a "$physdev" != "$tostop" \
+	    -a "$name" != "$tostop" \
+	    -a "/dev/mapper/$name" != "$tostop" \
+	    -a "$access" != "$tostop"; then
 		continue
 	fi
 
 	haveone=1
-
-	name="${loopdev#/dev/}"
-	name="cryptotab_${name//[^A-Za-z0-9]/_}"
 
 	if test -b "/dev/mapper/$name"; then
 
@@ -792,6 +816,8 @@ stop_cryptotab ()
     if test -z "$haveone" -a -z "$tostop"; then
 	rc_status -v1
     fi
+
+    test -z "$haveone" || foundit="$haveone"
 }
 
 stop_crypttab ()
@@ -800,12 +826,22 @@ stop_crypttab ()
 
     test -n "$tostop" || echo "Turning off crypto devices using $CRYPTTAB ... "
 
+    if test -n "$tostop" -a "${tostop:0:1}" = '/'; then
+	read name < <(awk -vd="$tostop" '$2==d{print $1}' < /etc/fstab)
+	if test "$?" -eq 0; then
+	    tostop="$name"
+	fi
+    fi
+
     while read name physdev keyfile options dummy; do
 	case "$name" in
 	\#*|"") continue ;;
 	esac
 
-	if test -n "$tostop" -a "$name" != "$tostop" -a "$physdev" != "$tostop"; then
+	if test -n "$tostop" \
+	    -a "$name" != "$tostop" \
+	    -a "/dev/mapper/$name" != "$tostop" \
+	    -a "$physdev" != "$tostop"; then
 		continue
 	fi
 
@@ -842,6 +878,8 @@ stop_crypttab ()
     if test -z "$haveone" -a -z "$tostop"; then
 	rc_status -v1
     fi
+
+    test -z "$haveone" || foundit="$haveone"
 }
 
 status_cryptotab()
@@ -852,6 +890,13 @@ status_cryptotab()
 	case "$loopdev" in
 	    \#*|"") continue ;;
 	esac
+
+	if test -n "$tostatus" \
+	    -a "$loopdev" != "$tostatus" \
+	    -a "$physdev" != "$tostatus" \
+	    -a "$access" != "$tostatus"; then
+		continue
+	fi
 
 	haveone=1
 
@@ -890,9 +935,11 @@ status_cryptotab()
 
     done < $CRYPTOTAB
 
-    if test -z "$haveone"; then
+    if test -z "$haveone" -a -z "$tostatus"; then
 	report 3 "$CRYPTOTAB"
     fi
+
+    test -z "$haveone" || foundit="$haveone"
 }
 
 status_crypttab()
@@ -900,10 +947,24 @@ status_crypttab()
     local state str
     local haveone=''
 
+    if test -n "$tostatus" -a "${tostatus:0:1}" = '/'; then
+	read name < <(awk -vd="$tostatus" '$2==d{print $1}' < /etc/fstab)
+	if test "$?" -eq 0; then
+	    tostatus="$name"
+	fi
+    fi
+
     while read name physdev keyfile options dummy; do
 	case "$name" in
 	\#*|"") continue ;;
 	esac
+
+	if test -n "$tostatus" \
+	    -a "$name" != "$tostatus" \
+	    -a "/dev/mapper/$name" != "$tostatus" \
+	    -a "$physdev" != "$tostatus"; then
+		continue
+	fi
 
 	haveone=1
 
@@ -955,9 +1016,11 @@ status_crypttab()
 
     done < $CRYPTTAB
 
-    if test -z "$haveone"; then
+    if test -z "$haveone" -a -z "$tostatus"; then
 	report 3 "$CRYPTTAB"
     fi
+
+    test -z "$haveone" || foundit="$haveone"
 }
 
 #
@@ -1029,14 +1092,17 @@ case "$1" in
 	fi
 
 	tostart="$2"
+	foundit=''
 
 	if test -s $CRYPTOTAB; then
 	    start_cryptotab
 	fi
 
-	if test -s $CRYPTTAB; then
+	if test -s $CRYPTTAB -a -z "$foundit"; then
 	    start_crypttab
 	fi
+
+	test -n "$foundit" || report 6 "$tostart ..."
 
 	rc_failed 0
 
@@ -1047,20 +1113,27 @@ case "$1" in
     stop)
 
 	tostop="$2"
+	foundit=''
 
 	if test -s $CRYPTOTAB; then
 	    stop_cryptotab
 	fi
 
-	if test -s $CRYPTTAB; then
+	if test -s $CRYPTTAB -a -z "$foundit"; then
 	    stop_crypttab
 	fi
+
+	test -n "$foundit" || report 6 "$tostop ..."
 
 	rc_failed 0
 
 	cutomize_stop_hook
 	;;
     status)
+
+	tostatus="$2"
+	foundit=''
+
 	if test -s $CRYPTOTAB; then
 	    status_cryptotab
 	fi
@@ -1068,7 +1141,11 @@ case "$1" in
 	if test -s $CRYPTTAB; then
 	    status_crypttab
 	fi
+
+	test -n "$foundit" || report 3 "$tostatus ..."
+
 	rc_failed 0
+
 	;;
     restart)
 	shift
@@ -1077,7 +1154,7 @@ case "$1" in
 	rc_status
 	;;
     *)
-	echo "Usage: $0 {start|stop|status|restart}"
+	echo "Usage: $0 {start|stop|status|restart} [DEVICE]"
 	exit 1
 	;;
 esac
