@@ -1071,8 +1071,9 @@ case "$1" in
 	rc_failed 0
 	;;
     restart)
-	$0 stop
-	$0 start
+	shift
+	$0 stop "$@"
+	$0 start "$@"
 	rc_status
 	;;
     *)
