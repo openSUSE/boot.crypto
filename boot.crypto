@@ -1098,7 +1098,7 @@ case "$1" in
 	    start_cryptotab
 	fi
 
-	if test -s $CRYPTTAB -a -z "$foundit"; then
+	if test -s $CRYPTTAB; then
 	    start_crypttab
 	fi
 
@@ -1119,7 +1119,7 @@ case "$1" in
 	    stop_cryptotab
 	fi
 
-	if test -s $CRYPTTAB -a -z "$foundit"; then
+	if test -s $CRYPTTAB; then
 	    stop_crypttab
 	fi
 
