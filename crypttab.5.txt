@@ -90,7 +90,7 @@ check fails the device is removed. The specified program is
 run giving the decrypted volume (/dev/mapper/NAME) as first and the
 value of the checkargs option as second argument. Cryptdisks
 searches for the given program in /lib/cryptsetup/checks/. If no
-program is specified, vol_id is used.
+program is specified, <<vol_id,vol_id>> is used.
 
 *checkargs*=<argument>::
 Pass <argument> as second argument to the check script
@@ -131,25 +131,18 @@ not supported. Listed here as they are supported by Debian.
 
 CHECKSCRIPTS
 ------------
-TODO
-/////
+
+check scripts are installed in `/lib/cryptsetup/checks/` and are
+called either before ('precheck' option) or after ('check' option)
+the dm-crypt target is set up.
+
 *vol_id*::
-Checks for any known filesystem. Supports a filesystem type as argument via
+[[vol_id]]Checks for any known filesystem. Supports a filesystem type as argument via
 <checkargs>:
-no checkargs - succeeds if any valid filesystem is found on the device.
-"none" - succeeds if no valid filesystem is found on the device.
-"ext3" [or any other filesystem type like xfs, swap, crypto_LUKS, whatever] - succeeds
-if an ext3 [or another given] filesystem type is found on the device.
-
-*ext3*::
-Checks for a valid ext2/ext3 filesystem.
-
-*xfs*::
-Checks for a valid xfs filesystem.
-
-*swap*::
-Checks for partition type 'swap'. Only useful as <precheck>.
-////
+no checkargs:: succeeds if any valid filesystem is found on the device.
+"none":: succeeds if no valid filesystem is found on the device.
+"ext3", "xfs", "swap" etc:: succeeds if the given filesystem type is found on
+the device.
 
 EXAMPLES
 --------

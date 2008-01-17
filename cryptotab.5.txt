@@ -1,0 +1,67 @@
+CRYPTOTAB(5)
+============
+
+NAME
+----
+cryptotab - static information about crypted filesystems (deprecated)
+
+
+SYNOPSIS
+--------
+*cryptotab*::
+'LOOPDEVICE' 'DEVICE' 'MOUNTPOINT' 'FILESYSTEM' 'ALGORITHM'[ 'MOUNTOPTIONS'[ 'INFO']]
+
+    
+DESCRIPTION
+-----------
+
+[NOTE]
+===========
+*/etc/cryptotab* was designed for use with the now
+deprecated cryptoloop technology and must therefore be considered
+deprecated as well. */etc/crypttab* (note the missing ``o'') should be
+used instead.
+===========
+
+The file */etc/cryptotab* contains descriptive informations about
+encrypted volumes. Each volume is described on a separate line;
+columns on each line are separated by tabs or spaces. Lines starting
+with "'#'" are comments, empty lines are ignored. The order of
+records in *cryptotab* is important because the
+*/etc/init.d/boot.crypto* script sequentially iterates through
+*cryptotab* entries.
+
+'LOOPDEVICE':: specifies the loop device to use for this mapping,
+  for example `/dev/loop0`
+
+'DEVICE':: specifies the block special device that holds the
+  encrypted data
+
+'MOUNTPOINT':: specifies the where the volume should be mounted
+
+'FILESYSTEM':: specifies the file system of the volume
+
+'ALGORITHM':: specifies the encryption algorithm to use
++
+Supported algorithms are 'twofish', 'twofishSL92' and 'twofish256'
+
+'MOUNTOPTIONS':: optionally specifies mount option
+
+'INFO':: optionally specifies a string that should be printed when
+  prompting for the passphrase
+
+EXAMPLES
+--------
+
+.........
+/dev/loop0 /dev/sda6 /secret ext2 twofish256
+.........
+
+SEE ALSO
+--------
+cryptsetup(8), /etc/crypttab, mount(8)
+
+
+AUTHOR
+------
+Ludwig Nussel <ludwig.nussel@suse.de>.

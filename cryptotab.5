@@ -1,0 +1,115 @@
+.\"     Title: cryptotab
+.\"    Author: 
+.\" Generator: DocBook XSL Stylesheets v1.73.1 <http://docbook.sf.net/>
+.\"      Date: 01/17/2008
+.\"    Manual: 
+.\"    Source: 
+.\"
+.TH "CRYPTOTAB" "5" "01/17/2008" "" ""
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.SH "NAME"
+cryptotab - static information about crypted filesystems (deprecated)
+.SH "SYNOPSIS"
+.PP
+\fBcryptotab\fR
+.RS 4
+
+\fILOOPDEVICE\fR
+\fIDEVICE\fR
+\fIMOUNTPOINT\fR
+\fIFILESYSTEM\fR
+\fIALGORITHM\fR[
+\fIMOUNTOPTIONS\fR[
+\fIINFO\fR]]
+.RE
+.SH "DESCRIPTION"
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+Note
+\fB/etc/cryptotab\fR was designed for use with the now deprecated cryptoloop technology and must therefore be considered deprecated as well\. \fB/etc/crypttab\fR (note the missing \(lqo\(rq) should be used instead\.
+.sp
+
+The file \fB/etc/cryptotab\fR contains descriptive informations about encrypted volumes\. Each volume is described on a separate line; columns on each line are separated by tabs or spaces\. Lines starting with "\fI#\fR" are comments, empty lines are ignored\. The order of records in \fBcryptotab\fR is important because the \fB/etc/init\.d/boot\.crypto\fR script sequentially iterates through \fBcryptotab\fR entries\.
+.sp
+.TS
+tab(:);
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+\fILOOPDEVICE\fR
+.sp
+T}:T{
+specifies the loop device to use for this mapping, for example /dev/loop0
+.sp
+T}
+T{
+\fIDEVICE\fR
+.sp
+T}:T{
+specifies the block special device that holds the encrypted data
+.sp
+T}
+T{
+\fIMOUNTPOINT\fR
+.sp
+T}:T{
+specifies the where the volume should be mounted
+.sp
+T}
+T{
+\fIFILESYSTEM\fR
+.sp
+T}:T{
+specifies the file system of the volume
+.sp
+T}
+T{
+\fIALGORITHM\fR
+.sp
+T}:T{
+specifies the encryption algorithm to use
+.sp
+
+Supported algorithms are \fItwofish\fR, \fItwofishSL92\fR and \fItwofish256\fR
+.sp
+T}
+T{
+\fIMOUNTOPTIONS\fR
+.sp
+T}:T{
+optionally specifies mount option
+.sp
+T}
+T{
+\fIINFO\fR
+.sp
+T}:T{
+optionally specifies a string that should be printed when prompting for the passphrase
+.sp
+T}
+.TE
+.sp
+.SH "EXAMPLES"
+.sp
+.RS 4
+.nf
+/dev/loop0 /dev/sda6 /secret ext2 twofish256
+.fi
+.RE
+.SH "SEE ALSO"
+cryptsetup(8), /etc/crypttab, mount(8)
+.sp
+.SH "AUTHOR"
+Ludwig Nussel <ludwig\.nussel@suse\.de>\.
+.sp
