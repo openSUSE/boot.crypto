@@ -655,10 +655,12 @@ start_crypttab ()
 	    mountpoint=''
 	    fs_type='auto'
 	    infstab=''
-	    read dummy mountpoint fs_type dummy < <(/bin/awk -vd=/dev/mapper/$name '$1==d{print;exit}' < /etc/fstab)
+	    read dummy mountpoint fs_type dummy dummy fs_passno < \
+		<(/bin/awk -vd=/dev/mapper/$name '$1==d{print;exit}' < /etc/fstab)
 	    if test "$?" -eq 0; then
 		infstab='yes'
 	    fi
+	    test -z "$fs_passno" && fs_passno=0
 
 	    # run mkfs if the tmp option was given
 	    if test "$maketmp" = "yes"; then
@@ -720,9 +722,11 @@ start_crypttab ()
 	    continue
 	fi
 
-	if ! run_fsck "$fs_type" "/dev/mapper/$name" "$mp" "$physdev"; then
-	    report 1 "$physdev..."
-	    continue
+	if test $fs_passno -gt 0; then
+	    if ! run_fsck "$fs_type" "/dev/mapper/$name" "$mp" "$physdev"; then
+	        report 1 "$physdev..."
+	        continue
+	    fi
 	fi
 
 	mount /dev/mapper/$name
