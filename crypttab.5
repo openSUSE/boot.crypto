@@ -1,11 +1,11 @@
 .\"     Title: crypttab
 .\"    Author: 
 .\" Generator: DocBook XSL Stylesheets v1.73.1 <http://docbook.sf.net/>
-.\"      Date: 01/17/2008
+.\"      Date: 01/23/2008
 .\"    Manual: 
 .\"    Source: 
 .\"
-.TH "CRYPTTAB" "5" "01/17/2008" "" ""
+.TH "CRYPTTAB" "5" "01/23/2008" "" ""
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
@@ -170,7 +170,9 @@ Always attach a loop device before mapping the device\. Normally a loop device i
 .PP
 \fBnoauto\fR
 .RS 4
-Causes boot\.crypto to skip this record during boot
+Causes boot\.crypto to skip this record during boot\. To activate this volume later use:
+\fB/etc/init\.d/boot\.crypto start\fR
+<name>
 .RE
 .PP
 \fBpseed=<string>\fR

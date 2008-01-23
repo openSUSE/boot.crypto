@@ -115,7 +115,9 @@ the block size of the physical device does not match the block size
 of the contained file system. E.g. ext2 on a CD.
 
 *noauto*::
-Causes boot.crypto to skip this record during boot
+Causes boot.crypto to skip this record during boot.
+To activate this volume later use:
+*/etc/init.d/boot.crypto start* <name>
 
 *pseed=<string>*::
 Set a string that is appended to the passphrase after hashing.
