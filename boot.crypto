@@ -85,7 +85,9 @@ ppid=0
 prmt=""
 setprompt ()
 {
-    if test -t 1 -a "$TERM" != "raw" -a "$TERM" != "dumb" && stty size <&1 > /dev/null 2>&1
+    read rows cols < <(stty size -F $REDIRECT 2>/dev/null)
+    test -z "$cols" && cols=0
+    if test -t 1 -a "$TERM" != "raw" -a "$TERM" != "dumb" && stty size <&1 > /dev/null 2>&1 && test $cols -gt ${#prmt}
     then
 	(
 	    trap "exit 0" SIGTERM
