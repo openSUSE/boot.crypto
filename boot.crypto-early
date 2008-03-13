@@ -22,22 +22,23 @@
 # /etc/init.d/boot.crypto
 #
 ### BEGIN INIT INFO
-# Provides:          boot.crypto
-# Required-Start:    boot.localfs boot.device-mapper
+# Provides:          boot.crypto-early
+# Required-Start:    boot.device-mapper
+# X-Start-Before:    boot.lvm boot.md
 # Should-Start:
 # Required-Stop:
 # Default-Start:     B
 # Default-Stop:
-# Description:       Enable crypto file systems before leaving boot phase
-# Short-Description: Enable crypto file systems before leaving boot phase
+# Description:       Enable early crypto file systems
+# Short-Description: Enable early crypto file systems
 ### END INIT INFO
 
 . /etc/rc.status
 
+CRYPT_EARLY=yes
+
 trap "echo" SIGINT SIGSEGV
 set +e
-
-unset CRYPT_EARLY
 
 . /lib/cryptsetup/boot.crypto.functions
 
@@ -55,10 +56,6 @@ case "$1" in
 	tostart="$2"
 	foundit=''
 
-	if test -s $CRYPTOTAB; then
-	    start_cryptotab
-	fi
-
 	if test -s $CRYPTTAB; then
 	    start_crypttab
 	fi
@@ -75,10 +72,6 @@ case "$1" in
 
 	tostop="$2"
 	foundit=''
-
-	if test -s $CRYPTOTAB; then
-	    stop_cryptotab
-	fi
 
 	if test -s $CRYPTTAB; then
 	    stop_crypttab
