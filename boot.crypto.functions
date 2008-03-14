@@ -428,7 +428,12 @@ start_crypttab ()
 	    continue
 	fi
 	if ! test -e $physdev ; then
-	    report 5 "$physdev doesn't exist"
+            if test "$CRYPT_EARLY" == "yes"; then
+                report 5 "$physdev does not exist (missing noearly option in /etc/crypttab?)"
+            else
+                report 5 "$physdev does not exist"
+            fi
+
 	    continue
 	fi
 
