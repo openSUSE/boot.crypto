@@ -119,6 +119,13 @@ Causes boot.crypto to skip this record during boot.
 To activate this volume later use:
 */etc/init.d/boot.crypto start* <name>
 
+*noearly*::
+boot.crypto is invoked two times. The first time as boot.crypto-early
+before LVM and MD setup and the second time as boot.crypto after
+mounting local filesystems. This option skips the setup of the device in
+the first invocation. It might be needed for crypto file
+container existing on local filesystems other then root.
+
 *pseed=<string>*::
 Set a string that is appended to the passphrase after hashing.
 Using different seeds for volumes with the same passphrase makes
