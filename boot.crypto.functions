@@ -111,6 +111,13 @@ reverse ()
     done
 }
 
+check_loop_module ()
+{
+    if test ! -d /sys/block/loop0; then
+        /sbin/modprobe -q loop
+    fi
+}
+
 detachloopdev ()
 {
     if [ -n "$loopdev" ]; then

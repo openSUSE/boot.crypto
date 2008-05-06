@@ -46,6 +46,8 @@ rc_reset
 case "$1" in
     start|b)
 
+	check_loop_module
+
 	if ! /sbin/modprobe -q dm-crypt; then
 	    echo "kernel lacks dm-crypt support"
 	    rc_failed 5
