@@ -54,6 +54,7 @@ case "$1" in
 
 	tostart="$2"
 	foundit=''
+	failed=0
 
 	if test -s $CRYPTOTAB; then
 	    start_cryptotab
@@ -65,9 +66,9 @@ case "$1" in
 
 	test -n "$foundit" || report 6 "$tostart ..."
 
-	rc_failed 0
-
 	restore
+
+	rc_failed $failed
 
 	cutomize_start_hook
 	;;
@@ -75,6 +76,7 @@ case "$1" in
 
 	tostop="$2"
 	foundit=''
+	failed=0
 
 	if test -s $CRYPTOTAB; then
 	    stop_cryptotab
@@ -86,7 +88,7 @@ case "$1" in
 
 	test -n "$foundit" || report 6 "$tostop ..."
 
-	rc_failed 0
+	rc_failed $failed
 
 	cutomize_stop_hook
 	;;

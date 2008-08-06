@@ -273,10 +273,12 @@ start_cryptotab ()
 	#
 	if ! test -d $access ; then
 	    report 5 "$physdev: $access doesn't exist"
+	    failed=1
 	    continue
 	fi
 	if ! test -e $physdev ; then
 	    report 5 "$physdev doesn't exist"
+	    failed=1
 	    continue
 	fi
 	#
@@ -289,6 +291,7 @@ start_cryptotab ()
 	    #TODO add more algorithm or better detection
 	    *)
 		    report 2 "$physdev: unsupported algorithm \"$crypto\""
+		    failed=1
 		    continue
 		    ;;
 	esac
@@ -322,6 +325,7 @@ start_cryptotab ()
 	    # with e.g. cdroms for backward compatability
 	    if ! losetup $loopdev $physdev; then
 		    report 1 "$physdev..."
+		    failed=1
 		    continue 2
 	    fi
 	    
@@ -335,6 +339,7 @@ start_cryptotab ()
 	    if test "$stat" -ne 0; then
 		    detachloopdev
 		    report 1 "$physdev..."
+		    failed=1
 		    continue 2
 	    fi
 
@@ -432,6 +437,7 @@ start_crypttab ()
 	# make sure the keyfile exists
 	if test -n "$keyfile" -a ! -e "$keyfile"; then
 	    report 5 "$physdev: $keyfile does not exist"
+	    failed=1
 	    continue
 	fi
 	if ! test -e $physdev ; then
@@ -441,6 +447,7 @@ start_crypttab ()
                 report 5 "$physdev does not exist"
             fi
 
+	    failed=1
 	    continue
 	fi
 
@@ -599,6 +606,7 @@ start_crypttab ()
 
 	    if test -z "$loopdev"; then
 		report 1 "$physdev: failed to find a usable loop device"
+		failed=1
 		continue
 	    fi
 	fi
@@ -641,6 +649,7 @@ start_crypttab ()
 	    if test $stat -ne 0; then
 		report 1 "$physdev... "
 		doskip=1
+		failed=1
 		detachloopdev
 		break
 	    fi
@@ -651,6 +660,7 @@ start_crypttab ()
 		if test $? -ne 0; then
 		    report 1 "$physdev... "
 		    doskip=1
+		    failed=1
 		    /sbin/cryptsetup remove $name
 		    detachloopdev
 		    break
@@ -678,6 +688,7 @@ start_crypttab ()
 		if test $? -ne 0; then
 		    report 1 "$phsdev: failed to create temporary file system."
 		    doskip=1
+		    failed=1
 		    /sbin/cryptsetup remove $name
 		    detachloopdev
 		    break
@@ -814,6 +825,7 @@ stop_cryptotab ()
 
 	    if ! umount_or_swapoff; then
 		report 1 "$physdev..."
+		failed=1
 		continue
 	    fi
 
@@ -821,7 +833,7 @@ stop_cryptotab ()
 	fi
 
 	if losetup $loopdev >/dev/null 2>&1; then
-	    losetup -d $loopdev || rc_failed 1
+	    losetup -d $loopdev || { rc_failed 1; failed=1; }
 	fi
 
 	echo -n "$physdev..."
@@ -869,10 +881,11 @@ stop_crypttab ()
 	if test -b "/dev/mapper/$name"; then
 	    if ! umount_or_swapoff; then
 		report 1 "$physdev..."
+		failed=1
 		continue
 	    fi
 
-	    /sbin/cryptsetup remove "$name" || rc_failed 1
+	    /sbin/cryptsetup remove "$name" || { rc_failed 1; failed=1; }
 	fi
 
 	# delete the loop device
@@ -883,7 +896,7 @@ stop_crypttab ()
 	done < <(/sbin/losetup -a)
 
 	if test -n "$loopdev" && losetup $device >/dev/null 2>&1; then
-	    /sbin/losetup -d $device || rc_failed 1
+	    /sbin/losetup -d $device ||  { rc_failed 1; failed=1; }
 	fi
 
 	echo -n "$physdev..."
