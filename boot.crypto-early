@@ -26,7 +26,8 @@
 # Required-Start:    boot.device-mapper
 # X-Start-Before:    boot.lvm boot.md
 # Should-Start:
-# Required-Stop:
+# Required-Stop:     boot.device-mapper
+# Should-Stop:
 # Default-Start:     B
 # Default-Stop:
 # Description:       Enable early crypto file systems

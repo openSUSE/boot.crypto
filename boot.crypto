@@ -25,7 +25,8 @@
 # Provides:          boot.crypto
 # Required-Start:    boot.localfs boot.device-mapper
 # Should-Start:
-# Required-Stop:
+# Required-Stop:     boot.localfs boot.device-mapper
+# Should-Stop:
 # Default-Start:     B
 # Default-Stop:
 # Description:       Enable crypto file systems before leaving boot phase
