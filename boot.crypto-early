@@ -24,7 +24,7 @@
 ### BEGIN INIT INFO
 # Provides:          boot.crypto-early
 # Required-Start:    boot.device-mapper
-# X-Start-Before:    boot.lvm boot.md
+# X-Start-Before:    boot.lvm boot.md boot.localfs
 # Should-Start:
 # Required-Stop:     boot.device-mapper
 # Should-Stop:
