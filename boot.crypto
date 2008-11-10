@@ -43,6 +43,12 @@ unset CRYPT_EARLY
 . /lib/cryptsetup/boot.crypto.functions
 
 rc_reset
+
+if test ! -s $CRYPTOTAB -a ! -s $CRYPTTAB; then
+	report 6 "no crypto partitions configured"
+	rc_exit
+fi
+
 case "$1" in
     start|b)
 
