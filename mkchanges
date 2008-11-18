@@ -5,4 +5,4 @@ if [ -z "$1" ]; then
 fi
 # no idea why it always prints those commit lines
 echo '- boot.crypto:'
-git-rev-list --pretty=format:"  * %s" "$@" |grep -v ^commit
+git rev-list --pretty=format:"  * %s" "$@" |grep -v ^commit
