@@ -468,7 +468,6 @@ start_crypttab ()
 	keysize=""
 	halgo=""
 	timeout=""
-	tries=""
 	pseed=""
 	itercountk=""
 	precheck=""
@@ -517,7 +516,7 @@ start_crypttab ()
 		;;
 	    tries)
 		if test -n "$value" ; then
-		    params="$params --tries=$tries"
+		    params="$params --tries=$value"
 		fi
 		;;
 	    check)
