@@ -16,7 +16,7 @@
 ## 
 
 case $luks_lang in
-    en*)
+    en_*|POSIX)
 	# We only support english keyboard layout
 	;;
     *)
