@@ -85,6 +85,8 @@ case "$1" in
 	foundit=''
 	failed=0
 
+	cutomize_pre_stop_hook
+
 	if test -s $CRYPTOTAB; then
 	    stop_cryptotab
 	fi
