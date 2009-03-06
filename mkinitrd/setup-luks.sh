@@ -3,9 +3,51 @@
 #%stage: crypto
 #
 
+# search for entries that have the 'initrd' option set
+find_crypttab_initrd()
+{
+    test -s /etc/crypttab || return
+
+    local addit extraopts
+
+    while read name physdev keyfile options dummy; do
+	case "$name" in
+	\#*|"") continue ;;
+	esac
+	if [ "$keyfile" != "none" ]; then
+	    echo "/etc/crypttab: $name: keyfile not supported by the initrd"
+	    continue
+	fi
+	if [ "$options" = "none" ]; then
+	    continue
+	fi
+
+	addit=''
+	extraopts=''
+
+	IFS=, eval set -- $options
+	for param in "$@"; do
+	    case "$param" in
+	    luks) ;;
+	    initrd) addit=1 ;;
+	    *) extraopts=1 ;;
+	    esac
+	done
+
+	if [ -n "$addit" ]; then
+	    if [ -n "$extraopts" ]; then
+		echo "/etc/crypttab: $name has extra options, not supported by the initrd"
+	    else
+		luks_add_device="$luks_add_device /dev/mapper/$name"
+	    fi
+	fi
+    done < /etc/crypttab
+}
+
 if [ -x /sbin/cryptsetup -a -x /sbin/dmsetup ] ; then
     luks_blockdev=
-    luks_add_device="$blockdev $luks_add_device"
+    luks_add_device="$blockdev"
+    find_crypttab_initrd
     # bd holds the device we see the decrypted LUKS partition as
     for bd in $luks_add_device ; do
     	luks_name=
@@ -25,6 +67,7 @@ if [ -x /sbin/cryptsetup -a -x /sbin/dmsetup ] ; then
 			save_var luks_${luks_name}
 
 			luks="$luks $luks_name"
+			echo "enabling LUKS support for $luksbd"
 			luks_blockdev="$luks_blockdev $luksbd"
 		fi
 	done
@@ -35,24 +78,21 @@ if [ -x /sbin/cryptsetup -a -x /sbin/dmsetup ] ; then
     blockdev="$luks_blockdev"
 fi
 
-if [ "$root_luks" ]; then
-    case $LANG in
-	en*)
+if [ -n "$root_luks" ]; then
+    case "$LANG" in
+	en_*|POSIX)
 	    # We only support english keyboard layout currently
 	    ;;
 	*)
 	    echo "Only english keyboard layout supported."
 	    echo "Please ensure that the password is typed correctly."
-	    luks_lang=$LANG
+	    luks_lang="$LANG"
 	    ;;
     esac
-    for m in $(cat /proc/crypto | grep module | sed 's/^module .*: \(.*\)$/\1/'); do
-	cryptmodules="$cryptmodules $m"
-    done
+    cryptmodules=`sed -ne '/^module/s/.*: //p' < /proc/crypto`
 fi
 
 save_var root_luks	# do we have luks?
 save_var luks		# which names do the luks devices have?
 save_var cryptmodules	# required kernel modules for crypto setup
 save_var luks_lang	# original language settings
-
