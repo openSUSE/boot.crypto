@@ -232,6 +232,16 @@ report()
     rc_status -v
 }
 
+makeabsolute()
+{
+    local var="$1"
+    eval "f=\"\$$var\""
+    if [ "${f:0:1}" != '/' ]; then
+	echo "${extd}Warning: please use an absolute path for $f${norm}"
+	eval "$var=\"$PWD/$f\""
+    fi
+}
+
 start_cryptotab ()
 {
     local stat=0
@@ -259,6 +269,8 @@ start_cryptotab ()
 	haveone=1
 
 	redirect
+
+	makeabsolute physdev
 
 	# key length for cryptsetup
 	keylen=
@@ -425,6 +437,8 @@ start_crypttab ()
 
 	haveone=1
 	redirect
+
+	makeabsolute physdev
 
 	# skip mapped entries
 	if test -e /dev/mapper/$name; then
@@ -821,6 +835,8 @@ stop_cryptotab ()
 
 	haveone=1
 
+	makeabsolute physdev
+
 	if test -b "/dev/mapper/$name"; then
 
 	    if ! umount_or_swapoff; then
@@ -875,6 +891,8 @@ stop_crypttab ()
 
 	haveone=1
 
+	makeabsolute physdev
+
 	loopdev=""
 	device="$physdev"
 
@@ -928,6 +946,8 @@ status_cryptotab()
 	fi
 
 	haveone=1
+
+	makeabsolute physdev
 
 	name="${loopdev#/dev/}"
 	name="cryptotab_${name//[^A-Za-z0-9]/_}"
@@ -996,6 +1016,8 @@ status_crypttab()
 	fi
 
 	haveone=1
+
+	makeabsolute physdev
 
 	echo -n "$physdev"
 	state=0
