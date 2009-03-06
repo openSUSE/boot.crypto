@@ -441,7 +441,7 @@ start_crypttab ()
 
 	# skip mapped entries
 	if test -e /dev/mapper/$name; then
-	    report 5 "$physdev: $name already mapped"
+	    report 5 "$name: already mapped"
 	    continue
 	fi
 
@@ -450,7 +450,7 @@ start_crypttab ()
 	
 	# make sure the keyfile exists
 	if test -n "$keyfile" -a ! -e "$keyfile"; then
-	    report 5 "$physdev: $keyfile does not exist"
+	    report 5 "$name: $keyfile does not exist"
 	    failed=1
 	    continue
 	fi
@@ -571,12 +571,12 @@ start_crypttab ()
 	fi
 
 	if test "$skip" = "yes" -o \( "$noauto" = "yes" -a -z "$tostart" \); then
-	    report 5 "$physdev"
+	    report 5 "$name"
 	    continue
 	fi
 
 	if test "$CRYPT_EARLY" = "yes" -a "$noearly" = "yes"; then
-	    report 5 "skipping $physdev (noearly)"
+	    report 5 "skipping $name (noearly)"
 	    continue
 	fi
 
@@ -584,7 +584,7 @@ start_crypttab ()
 	if test -n "$precheck"; then
 	    $precheck "$physdev"
 	    if test $? -ne 0; then
-		report 1 "$physdev... "
+		report 1 "$name... "
 		continue
 	    fi
 	fi
@@ -619,7 +619,7 @@ start_crypttab ()
 	    done
 
 	    if test -z "$loopdev"; then
-		report 1 "$physdev: failed to find a usable loop device"
+		report 1 "$name: failed to find a usable loop device"
 		failed=1
 		continue
 	    fi
@@ -634,7 +634,7 @@ start_crypttab ()
 	    fi
 
 	    if test -z "$keyfile"; then
-		prmt="${extd}Please enter passphrase for $physdev ($name): ${norm}"
+		prmt="${extd}Please enter passphrase for $name: ${norm}"
 		setprompt
 	    fi
 
@@ -661,7 +661,7 @@ start_crypttab ()
 	    fi
 
 	    if test $stat -ne 0; then
-		report 1 "$physdev... "
+		report 1 "$name... "
 		doskip=1
 		failed=1
 		detachloopdev
@@ -672,7 +672,7 @@ start_crypttab ()
 	    if test -n "$check"; then
 		$check "/dev/mapper/$name" $checkargs
 		if test $? -ne 0; then
-		    report 1 "$physdev... "
+		    report 1 "$name... "
 		    doskip=1
 		    failed=1
 		    /sbin/cryptsetup remove $name
@@ -721,7 +721,7 @@ start_crypttab ()
 		    if test "$stat" = 1; then # retype passphrase
 			continue
 		    elif test "$stat" = 2; then # skip entry
-			report 5 "$physdev..."
+			report 5 "$name..."
 			doskip=1
 		    fi
 		fi
@@ -743,7 +743,7 @@ start_crypttab ()
 	    mkswap "/dev/mapper/$name"
 	    stat="$?"
 	    test $stat -eq 0 || stat=1
-	    report $stat "$physdev..."
+	    report $stat "$name..."
 	    continue
 	fi
 
@@ -754,13 +754,13 @@ start_crypttab ()
 	fi
 
 	if test -z "$infstab"; then
-	    report 0 "$physdev..."
+	    report 0 "$name..."
 	    continue
 	fi
 
 	if test $fs_passno -gt 0; then
 	    if ! run_fsck "$fs_type" "/dev/mapper/$name" "$mp" "$physdev"; then
-	        report 1 "$physdev..."
+	        report 1 "$name..."
 	        continue
 	    fi
 	fi
@@ -779,7 +779,7 @@ start_crypttab ()
 	    chmod 1777 $mountpoint
 	fi
 
-	report $stat "$physdev..."
+	report $stat "$name..."
 
     done < $CRYPTTAB
 
@@ -898,7 +898,7 @@ stop_crypttab ()
 
 	if test -b "/dev/mapper/$name"; then
 	    if ! umount_or_swapoff; then
-		report 1 "$physdev..."
+		report 1 "$name..."
 		failed=1
 		continue
 	    fi
@@ -917,7 +917,7 @@ stop_crypttab ()
 	    /sbin/losetup -d $device ||  { rc_failed 1; failed=1; }
 	fi
 
-	echo -n "$physdev..."
+	echo -n "$name..."
 	rc_status -v
 
     done < <(reverse < $CRYPTTAB)
@@ -1019,7 +1019,7 @@ status_crypttab()
 
 	makeabsolute physdev
 
-	echo -n "$physdev"
+	echo -n "$name"
 	state=0
 	str=''
 
