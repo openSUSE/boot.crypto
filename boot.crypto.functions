@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 1996-2008 SUSE Linux Products GmbH, Nuernberg, Germany.
+# Copyright (C) 1996-2009 SUSE Linux Products GmbH, Nuernberg, Germany.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +17,8 @@
 #
 # Author:  Werner Fink <werner@suse.de>, 2001-2006
 #          Chris Rivera <crivera@novell.com> 2006
-#          Ludwig Nussel <lnussel@novell.com> 2007
+#          Matthias Koenig <mkoenig@novell.com> 2008
+#          Ludwig Nussel <lnussel@novell.com> 2007-2009
 #
 
 # Determine the base and follow a runlevel link name.
