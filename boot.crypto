@@ -77,7 +77,7 @@ case "$1" in
 
 	rc_failed $failed
 
-	cutomize_start_hook
+	customize_start_hook
 	;;
     stop)
 
@@ -85,7 +85,7 @@ case "$1" in
 	foundit=''
 	failed=0
 
-	cutomize_pre_stop_hook
+	customize_pre_stop_hook
 
 	if test -s $CRYPTOTAB; then
 	    stop_cryptotab
@@ -99,7 +99,7 @@ case "$1" in
 
 	rc_failed $failed
 
-	cutomize_stop_hook
+	customize_stop_hook
 	;;
     status)
 

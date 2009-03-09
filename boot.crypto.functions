@@ -1075,9 +1075,9 @@ status_crypttab()
 }
 
 #
-# Cutomize_{start,stop}_hook are for interactive usage only
+# Customize_{start,stop}_hook are for interactive usage only
 #
-cutomize_start_hook ()
+customize_start_hook ()
 {
     local srv
 
@@ -1105,7 +1105,7 @@ cutomize_start_hook ()
 }
 
 
-cutomize_pre_stop_hook ()
+customize_pre_stop_hook ()
 {
     local srv
 
@@ -1116,11 +1116,11 @@ cutomize_pre_stop_hook ()
     for srv in $STOP_BEFORE_STOP ; do
 	test -n "$srv" || break
 	test -x /etc/init.d/$srv || continue
-	/etc/init.d/$srv try-restart
+	/etc/init.d/$srv stop
     done
 }
 
-cutomize_stop_hook ()
+customize_stop_hook ()
 {
     local srv
 
