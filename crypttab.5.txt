@@ -1,5 +1,7 @@
 CRYPTTAB(5)
 ===========
+:man source:   cryptsetup
+:man manual:   Cryptsetup Manual
 
 NAME
 ----

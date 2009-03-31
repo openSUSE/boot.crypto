@@ -1,18 +1,174 @@
 .\"     Title: crypttab
-.\"    Author: 
-.\" Generator: DocBook XSL Stylesheets v1.73.1 <http://docbook.sf.net/>
-.\"      Date: 03/14/2008
-.\"    Manual: 
-.\"    Source: 
+.\"    Author: [see the "AUTHOR" section]
+.\" Generator: DocBook XSL Stylesheets v1.74.0 <http://docbook.sf.net/>
+.\"      Date: 03/31/2009
+.\"    Manual: Cryptsetup Manual
+.\"    Source: cryptsetup
+.\"  Language: English
 .\"
-.TH "CRYPTTAB" "5" "03/14/2008" "" ""
+.TH "CRYPTTAB" "5" "03/31/2009" "cryptsetup" "Cryptsetup Manual"
+.\" -----------------------------------------------------------------
+.\" * (re)Define some macros
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" toupper - uppercase a string (locale-aware)
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.de toupper
+.tr aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ
+\\$*
+.tr aabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz
+..
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" SH-xref - format a cross-reference to an SH section
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.de SH-xref
+.ie n \{\
+.\}
+.toupper \\$*
+.el \{\
+\\$*
+.\}
+..
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" SH - level-one heading that works better for non-TTY output
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.de1 SH
+.\" put an extra blank line of space above the head in non-TTY output
+.if t \{\
+.sp 1
+.\}
+.sp \\n[PD]u
+.nr an-level 1
+.set-an-margin
+.nr an-prevailing-indent \\n[IN]
+.fi
+.in \\n[an-margin]u
+.ti 0
+.HTML-TAG ".NH \\n[an-level]"
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+\." make the size of the head bigger
+.ps +3
+.ft B
+.ne (2v + 1u)
+.ie n \{\
+.\" if n (TTY output), use uppercase
+.toupper \\$*
+.\}
+.el \{\
+.nr an-break-flag 0
+.\" if not n (not TTY), use normal case (not uppercase)
+\\$1
+.in \\n[an-margin]u
+.ti 0
+.\" if not n (not TTY), put a border/line under subheading
+.sp -.6
+\l'\n(.lu'
+.\}
+..
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" SS - level-two heading that works better for non-TTY output
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.de1 SS
+.sp \\n[PD]u
+.nr an-level 1
+.set-an-margin
+.nr an-prevailing-indent \\n[IN]
+.fi
+.in \\n[IN]u
+.ti \\n[SN]u
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.ps \\n[PS-SS]u
+\." make the size of the head bigger
+.ps +2
+.ft B
+.ne (2v + 1u)
+.if \\n[.$] \&\\$*
+..
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" BB/BE - put background/screen (filled box) around block of text
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.de BB
+.if t \{\
+.sp -.5
+.br
+.in +2n
+.ll -2n
+.gcolor red
+.di BX
+.\}
+..
+.de EB
+.if t \{\
+.if "\\$2"adjust-for-leading-newline" \{\
+.sp -1
+.\}
+.br
+.di
+.in
+.ll
+.gcolor
+.nr BW \\n(.lu-\\n(.i
+.nr BH \\n(dn+.5v
+.ne \\n(BHu+.5v
+.ie "\\$2"adjust-for-leading-newline" \{\
+\M[\\$1]\h'1n'\v'+.5v'\D'P \\n(BWu 0 0 \\n(BHu -\\n(BWu 0 0 -\\n(BHu'\M[]
+.\}
+.el \{\
+\M[\\$1]\h'1n'\v'-.5v'\D'P \\n(BWu 0 0 \\n(BHu -\\n(BWu 0 0 -\\n(BHu'\M[]
+.\}
+.in 0
+.sp -.5v
+.nf
+.BX
+.in
+.sp .5v
+.fi
+.\}
+..
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" BM/EM - put colored marker in margin next to block of text
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.de BM
+.if t \{\
+.br
+.ll -2n
+.gcolor red
+.di BX
+.\}
+..
+.de EM
+.if t \{\
+.br
+.di
+.ll
+.gcolor
+.nr BH \\n(dn
+.ne \\n(BHu
+\M[\\$1]\D'P -.75n 0 0 \\n(BHu -(\\n[.i]u - \\n(INu - .75n) 0 0 -\\n(BHu'\M[]
+.in 0
+.nf
+.BX
+.in
+.fi
+.\}
+..
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
 .\" disable hyphenation
 .nh
 .\" disable justification (adjust text to left margin only)
 .ad l
-.SH "NAME"
-crypttab - static information about crypted filesystems
-.SH "SYNOPSIS"
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "Name"
+crypttab \- static information about crypted filesystems
+.SH "Synopsis"
 .PP
 \fBcrypttab\fR
 .RS 4
@@ -23,59 +179,87 @@ crypttab - static information about crypted filesystems
 \fIOPTIONS\fR
 .RE
 .SH "DESCRIPTION"
-The file \fB/etc/crypttab\fR contains descriptive informations about encrypted volumes\. Each volume is described on a separate line; columns on each line are separated by tabs or spaces\. Lines starting with "\fI#\fR" are comments, empty lines are ignored\. The order of records in \fBcrypttab\fR is important because the \fB/etc/init\.d/boot\.crypto\fR script sequentially iterates through \fBcrypttab\fR entries\. All four columns are mandatory, missing or excessive columns will lead to unspecified behaviour\.
 .sp
+The file \fB/etc/crypttab\fR contains descriptive informations about encrypted volumes\&. Each volume is described on a separate line; columns on each line are separated by tabs or spaces\&. Lines starting with "\fI#\fR" are comments, empty lines are ignored\&. The order of records in \fBcrypttab\fR is important because the \fB/etc/init\&.d/boot\&.crypto\fR script sequentially iterates through \fBcrypttab\fR entries\&. All four columns are mandatory, missing or excessive columns will lead to unspecified behaviour\&.
 .sp
 .RS 4
-\h'-04'\(bu\h'+03'The first column,
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+The first column,
 \fINAME\fR
 specifies the mapped
-\fIdevice name\fR\. It must be a plain filename without any directories\. A mapped device
+\fIdevice name\fR\&. It must be a plain filename without any directories\&. A mapped device
 \fB/dev/mapper/\fR\fINAME\fR
 will be created by
 \fBcryptsetup(8)\fR
 crypting data from and onto the
-\fIDEVICE\fR\.
+\fIDEVICE\fR\&.
 .sp
 To actually mount that device it needs to be listed in
-\fB/etc/fstab\fR\.
+\fB/etc/fstab\fR\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+03'The second column
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+The second column
 \fIDEVICE\fR
-specifies the block special device that should hold the encrypted data\.
+specifies the block special device that should hold the encrypted data\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+03'The third column
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+The third column
 \fIKEY\fR
 specifies a file containing the raw binary key to use for decrypting the encrypted data of
-\fIDEVICE\fR\. The key file can also be a device name (e\.g\.
-\fB/dev/urandom\fR, which is useful for encrypted swap devices)\.
+\fIDEVICE\fR\&. The key file can also be a device name (e\&.g\&.
+\fB/dev/urandom\fR, which is useful for encrypted swap devices)\&.
 .sp
 If
 \fIKEY\fR
 is the string
-\fBnone\fR, the key data (i\.e\. a password or passphrase) will be read interactively from the console\. In this case the options precheck, check, checkargs and tries may be useful\.
+\fBnone\fR, the key data (i\&.e\&. a password or passphrase) will be read interactively from the console\&. In this case the options precheck, check, checkargs and tries may be useful\&.
 .sp
 Warning: luks does not support infinite streams (like
-\fB/dev/urandom\fR), it requires a fixed size key\. Typically one uses
+\fB/dev/urandom\fR), it requires a fixed size key\&. Typically one uses
 \fBnone\fR
-for luks\.
+for luks\&.
 .RE
 .sp
 .RS 4
-\h'-04'\(bu\h'+03'The fourth field
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+The fourth field
 \fIOPTIONS\fR
-specifies the cryptsetup options associated with the encryption process\. At minimum, the field should contain the string
+specifies the cryptsetup options associated with the encryption process\&. At minimum, the field should contain the string
 \fBluks\fR
 or the
 \fIcipher\fR,
 \fIhash\fR
 and
 \fIsize\fR
-options\.
+options\&.
 .sp
 Options have to be specified in the format:
 \fIkey\fR=\fIvalue\fR[,\fIkey\fR=\fIvalue\fR
@@ -85,60 +269,60 @@ Options have to be specified in the format:
 .PP
 \fBcipher\fR=<cipher>
 .RS 4
-Encryption algorithm\. See
-\fBcryptsetup \-c\fR\.
+Encryption algorithm\&. See
+\fBcryptsetup \-c\fR\&.
 .RE
 .PP
 \fBsize\fR=<size>
 .RS 4
-Encryption key size\. See
-\fBcryptsetup \-s\fR\.
+Encryption key size\&. See
+\fBcryptsetup \-s\fR\&.
 .RE
 .PP
 \fBhash\fR=<hash>
 .RS 4
-Hash algorithm\. See
-\fBcryptsetup \-h\fR\.
+Hash algorithm\&. See
+\fBcryptsetup \-h\fR\&.
 .RE
 .PP
 \fBverify\fR
 .RS 4
-Verify password\. See
-\fBcryptsetup \-y\fR\.
+Verify password\&. See
+\fBcryptsetup \-y\fR\&.
 .RE
 .PP
 \fBreadonly\fR
 .RS 4
-The backing device is read\-only (eg: a dvd)\.
+The backing device is read\-only (eg: a dvd)\&.
 .RE
 .PP
 \fBluks\fR
 .RS 4
-Use device with luks extensions\.
+Use device with luks extensions\&.
 .RE
 .PP
 \fBswap\fR
 .RS 4
 Run
 \fBmkswap\fR
-on the created device\.
+on the created device\&.
 .RE
 .PP
 \fBtmp\fR
 .RS 4
 Run
 \fBmkfs\fR
-on the created device\. The file system to use is specified in
-\fB/etc/fstab\fR\. If
+on the created device\&. The file system to use is specified in
+\fB/etc/fstab\fR\&. If
 \fB/etc/fstab\fR
-does not list the mapped device, ext2 is used as fallback\.
+does not list the mapped device, ext2 is used as fallback\&.
 .RE
 .PP
 \fBcheck\fR[=<program>]
 .RS 4
-Check the content of the mapped device by a suitable program; if the check fails the device is removed\. The specified program is run giving the decrypted volume (/dev/mapper/NAME) as first and the value of the checkargs option as second argument\. Cryptdisks searches for the given program in /lib/cryptsetup/checks/\. If no program is specified,
+Check the content of the mapped device by a suitable program; if the check fails the device is removed\&. The specified program is run giving the decrypted volume (/dev/mapper/NAME) as first and the value of the checkargs option as second argument\&. Cryptdisks searches for the given program in /lib/cryptsetup/checks/\&. If no program is specified,
 vol_id
-is used\.
+is used\&.
 .RE
 .PP
 \fBcheckargs\fR=<argument>
@@ -148,59 +332,60 @@ Pass <argument> as second argument to the check script
 .PP
 \fBprecheck\fR=<program>
 .RS 4
-Check the source device by suitable program; if the check fails the device is not created; <precheck> is a script to check the source device\. The source device is given as argument to the script\. See also the
+Check the source device by suitable program; if the check fails the device is not created; <precheck> is a script to check the source device\&. The source device is given as argument to the script\&. See also the
 \fBcheck\fR
-option\.
+option\&.
 .RE
 .PP
 \fBtries\fR=<num>
 .RS 4
-Prompt for the passphrase at most <num> times if the entered passphrase was wrong\. Defaults is 3\. Only works for LUKS volumes\.
+Prompt for the passphrase at most <num> times if the entered passphrase was wrong\&. Defaults is 3\&. Only works for LUKS volumes\&.
 .RE
 .PP
 \fBtimeout\fR=<sec>
 .RS 4
-Time out interactive password prompts after <sec> seconds\.
+Time out interactive password prompts after <sec> seconds\&.
 .RE
 .PP
 \fBloop\fR
 .RS 4
-Always attach a loop device before mapping the device\. Normally a loop device is used automatically only for image files\. Useful if the block size of the physical device does not match the block size of the contained file system\. E\.g\. ext2 on a CD\.
+Always attach a loop device before mapping the device\&. Normally a loop device is used automatically only for image files\&. Useful if the block size of the physical device does not match the block size of the contained file system\&. E\&.g\&. ext2 on a CD\&.
 .RE
 .PP
 \fBnoauto\fR
 .RS 4
-Causes boot\.crypto to skip this record during boot\. To activate this volume later use:
-\fB/etc/init\.d/boot\.crypto start\fR
+Causes boot\&.crypto to skip this record during boot\&. To activate this volume later use:
+\fB/etc/init\&.d/boot\&.crypto start\fR
 <name>
 .RE
 .PP
 \fBnoearly\fR
 .RS 4
-boot\.crypto is invoked two times\. The first time as boot\.crypto\-early before LVM and MD setup and the second time as boot\.crypto after mounting local filesystems\. This option skips the setup of the device in the first invocation\. It might be needed for crypto file container existing on local filesystems other then root\.
+boot\&.crypto is invoked two times\&. The first time as boot\&.crypto\-early before LVM and MD setup and the second time as boot\&.crypto after mounting local filesystems\&. This option skips the setup of the device in the first invocation\&. It might be needed for crypto file container existing on local filesystems other then root\&.
 .RE
 .PP
 \fBpseed=<string>\fR
 .RS 4
-Set a string that is appended to the passphrase after hashing\. Using different seeds for volumes with the same passphrase makes dictionary attacks harder\. Use for compatability with loop\-AES\.
+Set a string that is appended to the passphrase after hashing\&. Using different seeds for volumes with the same passphrase makes dictionary attacks harder\&. Use for compatability with loop\-AES\&.
 .RE
 .PP
 \fBitercountk=<num>\fR
 .RS 4
-Encrypts the hashed password <num> thousand times using AES\-256\. Use for compatability with loop\-AES\.
+Encrypts the hashed password <num> thousand times using AES\-256\&. Use for compatability with loop\-AES\&.
 .RE
 .PP
 \fBloud\fR, \fBssl\fR, \fBgpg\fR, \fBkeyscript\fR
 .RS 4
-not supported\. Listed here as they are supported by Debian\.
+not supported\&. Listed here as they are supported by Debian\&.
 .RE
 .SH "CHECKSCRIPTS"
-check scripts are installed in /lib/cryptsetup/checks/ and are called either before (\fIprecheck\fR option) or after (\fIcheck\fR option) the dm\-crypt target is set up\.
+.sp
+check scripts are installed in \FC/lib/cryptsetup/checks/\F[] and are called either before (\fIprecheck\fR option) or after (\fIcheck\fR option) the dm\-crypt target is set up\&.
 .PP
 \fBvol_id\fR
 .RS 4
 
-Checks for any known filesystem\. Supports a filesystem type as argument via <checkargs>:
+Checks for any known filesystem\&. Supports a filesystem type as argument via <checkargs>:
 .TS
 tab(:);
 lt lt
@@ -209,20 +394,20 @@ lt lt.
 T{
 no checkargs
 T}:T{
-succeeds if any valid filesystem is found on the device\.
+succeeds if any valid filesystem is found on the device\&.
 T}
 T{
 "none"
 T}:T{
-succeeds if no valid filesystem is found on the device\.
+succeeds if no valid filesystem is found on the device\&.
 T}
 T{
 "ext3", "xfs", "swap" etc
 T}:T{
-succeeds if the given filesystem type is found on the device\.
+succeeds if the given filesystem type is found on the device\&.
 T}
 .TE
-.sp
+.sp 1
 .RE
 .SH "EXAMPLES"
 .PP
@@ -246,8 +431,8 @@ cdisk2 /dev/hdc1 none luks,check=customscript,checkargs=foo,tries=1
 cdisk3 /dev/sda3 none cipher=twofish\-cbc\-plain,size=256,hash=sha512
 .RE
 .SH "SEE ALSO"
+.sp
 cryptsetup(8), /etc/crypttab, fstab(8)
-.sp
 .SH "AUTHOR"
-Manual page converted to asciidoc by Michael Gebetsroither <michael\.geb@gmx\.at>\. Originally written by Bastian Kleineidam <calvin@debian\.org> for the Debian distribution of cryptsetup\. Improved by Jonas Meurer <jonas@freesources\.org>\. Modified for SUSE Linux by Ludwig Nussel <ludwig\.nussel@suse\.de>\. Parts of this manual were taken and adapted from the fstab(5) manual page\.
 .sp
+Manual page converted to asciidoc by Michael Gebetsroither <michael\&.geb@gmx\&.at>\&. Originally written by Bastian Kleineidam <calvin@debian\&.org> for the Debian distribution of cryptsetup\&. Improved by Jonas Meurer <jonas@freesources\&.org>\&. Modified for SUSE Linux by Ludwig Nussel <ludwig\&.nussel@suse\&.de>\&. Parts of this manual were taken and adapted from the fstab(5) manual page\&.
