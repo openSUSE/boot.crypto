@@ -242,6 +242,34 @@ makeabsolute()
     fi
 }
 
+resolvelink()
+{
+    local var="$1"
+    local dev l d
+    local i=0
+    eval "dev=\"\$$var\""
+    while l=`readlink "$dev"`; do
+	    # weird way to find real path of a relative link
+	    if [ "${l:0:1}" != / ]; then
+		d=${l%/*}
+		test "$d" != "$l" || d=''
+		if ! cd "${dev%/*}/$d"; then
+		    echo "${extd}Warning: can't resolve $dev${norm}"
+		    return 1
+		fi
+		l="$PWD/${l##*/}"
+		cd - > /dev/null
+	    fi
+	    dev="$l"
+	    i=$((i+1))
+	    if [ "$i" -gt 10 ]; then
+		echo "${extd}Warning: too many symbolic links for $dev${norm}"
+		return 1
+	    fi
+    done
+    eval "$var=\"$dev\""
+}
+
 start_cryptotab ()
 {
     local stat=0
@@ -907,10 +935,13 @@ stop_crypttab ()
 	    /sbin/cryptsetup remove "$name" || { rc_failed 1; failed=1; }
 	fi
 
+	linkdev="$physdev"
+	! test -L "$linkdev" || resolvelink linkdev
 	# delete the loop device
 	while read line; do
 	    case "$line" in
-	    *\(${physdev}\)*) device=${line%%:*}; loopdev='yes' ;;
+	    *\(${physdev}\)*) device=${line%%:*}; loopdev='yes'; break ;;
+	    *\(${linkdev}\)*) device=${line%%:*}; loopdev='yes'; break ;;
 	    esac
 	done < <(/sbin/losetup -a)
 
@@ -1025,10 +1056,13 @@ status_crypttab()
 	str=''
 
 	loopdev=''
+	linkdev="$physdev"
+	! test -L "$linkdev" || resolvelink linkdev
 	# find the loop device
 	while read line; do
 	    case "$line" in
-	    *\(${physdev}\)*) loopdev=${line%%:*};;
+	    *\(${physdev}\)*) loopdev=${line%%:*}; break ;;
+	    *\(${linkdev}\)*) loopdev=${line%%:*}; break ;;
 	    esac
 	done < <(/sbin/losetup -a)
 
