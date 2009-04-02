@@ -580,6 +580,7 @@ start_crypttab ()
 		    precheck="/lib/cryptsetup/checks/$value"
 		fi
 		;;
+	    initrd) ;; # ignore here
 	    loud|ssl|gpg|keyscript|*)
 		echo "unsupported crypttab option: '$param'"
 		skip='yes'
