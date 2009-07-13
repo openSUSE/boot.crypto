@@ -17,8 +17,10 @@
 
 luksopen()
 {
-	local dev="$1"
-	eval /sbin/cryptsetup luksOpen "\"\${luks_${luks}}\"" "\"\$dev\""
+	local name="$1"
+	eval local dev="\"\${luks_${luks}}\""
+	check_for_device "$dev"
+	/sbin/cryptsetup luksOpen "$dev" "$name"
 }
 
 do_luks() {
