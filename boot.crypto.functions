@@ -28,7 +28,16 @@ link=${base#*[SK][0-9][0-9]}
 # Redirect to real device (e.g. in case of boot logging)
 : ${CRYPTOTAB:=/etc/cryptotab}
 : ${CRYPTTAB:=/etc/crypttab}
-: ${TIMEOUT:=120}
+
+# wait indefinitely in 2nd stage install to have a complete system
+# for YaST.
+if [ -z "$TIMEOUT" ]; then
+	if [ -e /var/lib/YaST2/runme_at_boot ]; then
+		TIMEOUT=0
+	else
+		TIMEOUT=120
+	fi
+fi
 if test -z "$REDIRECT" ; then
     if (echo -n > /dev/tty) 2>/dev/null ; then
 	REDIRECT=/dev/tty
