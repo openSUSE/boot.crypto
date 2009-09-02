@@ -375,7 +375,7 @@ start_cryptotab ()
 		    continue 2
 	    fi
 	    
-	    params="-t $timeout -c $cipher -s $keylen -h $hashalgo"
+	    local params="-t $timeout -c $cipher -s $keylen -h $hashalgo"
 
 	    setprompt
 	    /sbin/cryptsetup $params create "$name" "$device" < $REDIRECT > $REDIRECT 2>&1
@@ -488,12 +488,6 @@ start_crypttab ()
 	test "$keyfile" = "none" && keyfile=""
 	test "$options" = "none" && options=""
 	
-	# make sure the keyfile exists
-	if test -n "$keyfile" -a ! -e "$keyfile"; then
-	    report 5 "$name: $keyfile does not exist"
-	    failed=1
-	    continue
-	fi
 	if ! test -e $physdev ; then
             if test "$CRYPT_EARLY" == "yes"; then
                 report 5 "$physdev does not exist (missing noearly option in /etc/crypttab?)"
@@ -507,7 +501,7 @@ start_crypttab ()
 
 	# parse the options field
 	skip=""
-	params=""
+	params=()
 	makeswap=""
 	maketmp=""
 	noauto=""
@@ -554,7 +548,7 @@ start_crypttab ()
 		fi
 		halgo="$value"
 		;;
-	    verify) params="$params -y" ;;
+	    verify) params+=(-y) ;;
 	    swap)   makeswap="yes" ;;
 	    tmp)    maketmp="yes" ;;
 	    noauto) noauto="yes" ;;
@@ -570,7 +564,7 @@ start_crypttab ()
 		;;
 	    tries)
 		if test -n "$value" ; then
-		    params="$params --tries=$value"
+		    params+=(--tries="$value")
 		fi
 		;;
 	    check)
@@ -618,6 +612,12 @@ start_crypttab ()
 	fi
 
 	if test -n "$keyfile" -a -z "$keyscript"; then
+	    # make sure the keyfile exists
+	    if  ! -e "$keyfile"; then
+		report 5 "$name: $keyfile does not exist"
+		failed=1
+		continue
+	    fi
 	    if test -n "$halgo" -o -n "$pseed" -o -n "$itercountk"; then
 		report 2 "${ext}hash, pseed and itercountk options are invalid when using a key file${norm}"
 		continue
@@ -644,7 +644,7 @@ start_crypttab ()
 	fi
 
 	if test -n "$param_ro"; then
-	    params="$params $param_ro"
+	    params+=($param_ro)
 	fi
 
 	device="$physdev"
@@ -691,29 +691,32 @@ start_crypttab ()
 		timeout="$TIMEOUT"
 	    fi
 	    if test "$timeout" != 0; then
-		params="$params --timeout=$timeout"
+		params+=(--timeout="$timeout")
 	    fi
 
+	    local cmd
 	    # map the devices
 	    if test -n "$luks" || cryptsetup isLuks "$device" &> /dev/null; then
 		luks='yes'
-		params="$params luksOpen $device $name"
+		cmd=(luksOpen "$device" "$name")
 	    else
 		if test -z "$keyscript"; then
 		    # XXX hack
 		    if test -n "$pseed" -o -n "$itercountk"; then
 			keyscript=keyscript_hashalot
 		    fi
-		    params="$params ${halgo:+-h $halgo}"
+		    test -z "$halgo" || params+=(-h $halgo)
 		fi
-		params="$params ${cipher:+-c $cipher} ${keysize:+-s $keysize} create $name $device"
+		params+=(${cipher:+-c $cipher} ${keysize:+-s $keysize})
+		cmd=(create "$name" "$device")
 	    fi
 
 	    if test -n "$keyscript"; then
 		    # must use /dev/stdin instead of "-" as cryptsetup would hash that
-		    ( $keyscript "$keyfile" | /sbin/cryptsetup -d /dev/stdin $params; ) < $REDIRECT &> $REDIRECT
+		    test "$luks" = 'yes' || params+=(-d /dev/stdin)
+		    ( $keyscript "$keyfile" | /sbin/cryptsetup "${params[@]}" "${cmd[@]}"; ) < $REDIRECT &> $REDIRECT
 	    else
-		    /sbin/cryptsetup ${keyfile:+-d $keyfile} $params < $REDIRECT &> $REDIRECT
+		    /sbin/cryptsetup ${keyfile:+-d $keyfile} "${params[@]}" "${cmd[@]}" < $REDIRECT &> $REDIRECT
 	    fi
 	    stat=$?
 
