@@ -1,6 +1,6 @@
 #!/bin/bash
 #%stage: crypto
-#%programs: /sbin/cryptsetup
+#%programs: /sbin/cryptsetup $cryptprograms
 #%udevmodules: dm-crypt $cryptmodules
 #%if: "$root_luks" -o "$luks"
 #
@@ -35,24 +35,39 @@ do_luks() {
 	esac
 
 	set -- $luks
-
-	# try to reuse passphrase if multiple devices are to be
-	# decrypted
 	if [ $# -gt 1 ]; then
-		local pass
-		echo
-		echo -n "Enter LUKS Passphrase:"
-		read -s pass
-		echo
+		local reuse_pass=1
+	fi
 
-		for luks in "$@"; do
-			echo $pass | luksopen "$luks" || luksopen "$luks"
-		done
+	for luks in "$@"; do
+		eval local keyfile="\"\${luks_${luks}_keyfile}\""
+		eval local keyscript="\"\${luks_${luks}_keyscript}\""
+		if [ -z "$keyscript" ]; then
+			# try to reuse passphrase if multiple
+			# devices are to be decrypted
+			if [ -n "$reuse_pass" ]; then
+				if [ -z "$pass" ]; then
+					local pass
+					echo
+					echo -n "Enter LUKS Passphrase:"
+					read -s pass
+					echo
+				fi
 
+				echo "$pass" | luksopen "$luks" || {
+					pass='xxxxxxxxxxxxxxxxxxxx'; unset pass; luksopen "$luks"; }
+			else
+				luksopen "$luks"
+			fi
+		else
+			$keyscript "$keyfile" | luksopen "$luks"
+		fi
+
+	done
+
+	if [ -n "$pass" ]; then
 		pass='xxxxxxxxxxxxxxxxxxxx'
 		unset pass
-	else
-		luksopen "$luks"
 	fi
 }
 
