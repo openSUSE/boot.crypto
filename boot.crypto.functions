@@ -145,7 +145,6 @@ check_superblock()
 # 0 - ok
 # 1 - enter passphrase again
 # 2 - skip entry
-# 3 - fsck
 #
 paranoid_safety_checks()
 {
@@ -163,17 +162,14 @@ paranoid_safety_checks()
 	echo "file system on $physdev might be corrupted.${norm}"
 
 	while true ; do
-	    echo    "${extd}To check the file system, enter Check.${norm}"
 	    echo -n "${extd}Retry entering the passphrase?${norm}"
 	    choice=
-	    read -p " ([${extd}yes${norm}]/${extd}no${norm}/${extd}check${norm}/) " choice < $REDIRECT || { echo 'no'; choice='no'; }
+	    read -p " ([${extd}yes${norm}]/${extd}no${norm}) " choice < $REDIRECT || { echo 'no'; choice='no'; }
 	    case "$choice" in
 		[yY][eE][sS]|[yY]|"")
 		    return 1 ;;
 		[nN][oO]|[nN])
 		    return 2 ;;
-		[Cc][hH][eE][Cc][kK]|[Cc])
-		    return 3 ;;
 	    esac
 	done
     fi
