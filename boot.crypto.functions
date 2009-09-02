@@ -437,9 +437,15 @@ start_cryptotab ()
     test -z "$haveone" || foundit="$haveone"
 }
 
-hashalotcryptsetup()
+# options are alreay parsed so we ignore the option parmeter ($2)
+keyscript_hashalot()
 {
-    /sbin/hashalot ${halgo:+$halgo} -t $timeout ${pseed:+-s $pseed} ${itercountk:+-C $itercountk} | /sbin/cryptsetup "$@"
+    local args="${halgo:+$halgo} -t $timeout ${pseed:+-s $pseed} ${itercountk:+-C $itercountk}"
+    if test -n "$1"; then
+	/sbin/hashalot $args < $1
+    else
+	/sbin/hashalot $args
+    fi
 }
 
 start_crypttab ()
@@ -518,6 +524,7 @@ start_crypttab ()
 	pseed=""
 	itercountk=""
 	precheck=""
+	keyscript=""
 	while test -n "$options"; do
 	    arg=${options%%,*}
 	    options=${options##$arg}
@@ -585,8 +592,9 @@ start_crypttab ()
 		    precheck="/lib/cryptsetup/checks/$value"
 		fi
 		;;
+	    keyscript) keyscript="$value" ;;
 	    initrd) ;; # ignore here
-	    loud|ssl|gpg|keyscript|*)
+	    loud|ssl|gpg|*)
 		echo "unsupported crypttab option: '$param'"
 		skip='yes'
 		;;
@@ -598,7 +606,18 @@ start_crypttab ()
 		echo "cipher, hash, size, pseed and itercountk options are ignored for LUKS"
 	    fi
 	fi
-	if test -n "$keyfile"; then
+
+	if test -n "$keyscript"; then
+	    if test "${keyscript:0:1}" != '/'; then
+		keyscript="/lib/cryptsetup/scripts/$keyscript"
+	    fi
+	    if ! test -x "$keyscript"; then
+		report 2 "${ext}keyscript \"$keyscript\" must be an executable${norm}"
+		continue
+	    fi
+	fi
+
+	if test -n "$keyfile" -a -z "$keyscript"; then
 	    if test -n "$halgo" -o -n "$pseed" -o -n "$itercountk"; then
 		report 2 "${ext}hash, pseed and itercountk options are invalid when using a key file${norm}"
 		continue
@@ -627,12 +646,6 @@ start_crypttab ()
 	if test -n "$param_ro"; then
 	    params="$params $param_ro"
 	fi
-
-	# we always want a timeout to prevent accidential hanging boot
-	if test -z "$timeout"; then
-	    timeout="$TIMEOUT"
-	fi
-	params="$params --timeout=$timeout"
 
 	device="$physdev"
 	# if device is a regular file then it's an image
@@ -668,30 +681,46 @@ start_crypttab ()
 		/sbin/cryptsetup remove $name
 	    fi
 
-	    if test -z "$keyfile"; then
+	    if test -z "$keyfile" -a -z "$keyscript"; then
 		prmt="${extd}Please enter passphrase for $name: ${norm}"
 		setprompt
+	    fi
+
+	    # we always want a timeout to prevent accidential hanging boot
+	    if test -z "$timeout"; then
+		timeout="$TIMEOUT"
+	    fi
+	    if test "$timeout" != 0; then
+		params="$params --timeout=$timeout"
 	    fi
 
 	    # map the devices
 	    if test -n "$luks" || cryptsetup isLuks "$device" &> /dev/null; then
 		luks='yes'
-		/sbin/cryptsetup $params ${keyfile:+-d $keyfile} luksOpen "$device" "$name" < $REDIRECT &> $REDIRECT
-		stat=$?
+		params="$params luksOpen $device $name"
 	    else
-		# XXX hack
-		if test -n "$pseed" -o -n "$itercountk"; then
-		    params="$params -d /dev/stdin" # cannot use "-" as cryptsetup would hash that
-		    cryptsetup=hashalotcryptsetup
-		else
-		    cryptsetup=/sbin/cryptsetup
+		if test -z "$keyscript"; then
+		    # XXX hack
+		    if test -n "$pseed" -o -n "$itercountk"; then
+			keyscript=keyscript_hashalot
+		    fi
+		    params="$params ${halgo:+-h $halgo}"
 		fi
-		params="$params ${cipher:+-c $cipher} ${halgo:+-h $halgo} ${keysize:+-s $keysize}"
-		$cryptsetup $params ${keyfile:+-d $keyfile} create "$name" "$device" < $REDIRECT &> $REDIRECT
-		stat=$?
-		unset cryptsetup
+		params="$params ${cipher:+-c $cipher} ${keysize:+-s $keysize} create $name $device"
 	    fi
+
+	    if test -n "$keyscript"; then
+		    # must use /dev/stdin instead of "-" as cryptsetup would hash that
+		    ( $keyscript "$keyfile" | /sbin/cryptsetup -d /dev/stdin $params; ) < $REDIRECT &> $REDIRECT
+	    else
+		    /sbin/cryptsetup ${keyfile:+-d $keyfile} $params < $REDIRECT &> $REDIRECT
+	    fi
+	    stat=$?
+
 	    if test -z "$keyfile"; then
+		# we only set the prompt if keyscript was not set before but
+		# since we later use keyscript for hashalot which needs the
+		# prompt we unset it here always.
 		unsetprompt
 	    fi
 
