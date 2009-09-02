@@ -25,7 +25,7 @@ find_crypttab_initrd()
 	addit=''
 	extraopts=''
 
-	IFS=, eval set -- $options
+	IFS=, eval set -- \$options
 	for param in "$@"; do
 	    case "$param" in
 	    luks) ;;
