@@ -15,12 +15,27 @@
 ## luks_xxx		the luks device (e.g. /dev/sda)
 ## 
 
-luksopen()
+# can't do this in luksopen as it would mix output with the
+# keyscript
+luks_wait_device()
 {
 	local name="$1"
 	eval local dev="\"\${luks_${luks}}\""
 	check_for_device "$dev"
+}
+
+luksopen()
+{
+	local name="$1"
+	eval local dev="\"\${luks_${luks}}\""
 	/sbin/cryptsetup --tries=1 luksOpen "$dev" "$name"
+}
+
+check_retry()
+{
+	# return value != 255 means some error with getting the key,
+	# like timeout or ^d. No retry in that case.
+	[ "$1" -ne 0 -a "$1" -eq 255 ]
 }
 
 do_luks() {
@@ -42,27 +57,32 @@ do_luks() {
 	for luks in "$@"; do
 		eval local keyfile="\"\${luks_${luks}_keyfile}\""
 		eval local keyscript="\"\${luks_${luks}_keyscript}\""
-		if [ -z "$keyscript" ]; then
-			# try to reuse passphrase if multiple
-			# devices are to be decrypted
-			if [ -n "$reuse_pass" ]; then
-				if [ -z "$pass" ]; then
-					local pass
-					echo
-					echo -n "Enter LUKS Passphrase:"
-					read -s pass
-					echo
+		luks_wait_device "$luks"
+		while true; do
+			if [ -z "$keyscript" ]; then
+				# try to reuse passphrase if multiple
+				# devices are to be decrypted
+				if [ -n "$reuse_pass" ]; then
+					if [ -z "$pass" ]; then
+						local pass
+						echo
+						echo -n "Enter LUKS Passphrase:"
+						read -s pass
+						echo
+					fi
+
+					echo "$pass" | luksopen "$luks" || {
+						pass='xxxxxxxxxxxxxxxxxxxx'; unset pass; luksopen "$luks"; }
+					check_retry $? || break;
+				else
+					luksopen "$luks"
+					check_retry $? || break;
 				fi
-
-				echo "$pass" | luksopen "$luks" || {
-					pass='xxxxxxxxxxxxxxxxxxxx'; unset pass; luksopen "$luks"; }
 			else
-				luksopen "$luks"
+				$keyscript "$keyfile" | luksopen "$luks"
+				check_retry $? || break;
 			fi
-		else
-			$keyscript "$keyfile" | luksopen "$luks"
-		fi
-
+		done
 	done
 
 	if [ -n "$pass" ]; then
