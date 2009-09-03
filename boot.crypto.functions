@@ -519,6 +519,7 @@ start_crypttab ()
 	itercountk=""
 	precheck=""
 	keyscript=""
+	tries="3"
 	while test -n "$options"; do
 	    arg=${options%%,*}
 	    options=${options##$arg}
@@ -564,7 +565,7 @@ start_crypttab ()
 		;;
 	    tries)
 		if test -n "$value" ; then
-		    params+=(--tries="$value")
+		    tries="$value"
 		fi
 		;;
 	    check)
@@ -674,6 +675,7 @@ start_crypttab ()
 	fi
 
 	doskip=0
+	local tried=1;
 
 	while true; do # setup/check loop
 
@@ -683,7 +685,7 @@ start_crypttab ()
 
 	    if test -z "$keyfile" -a -z "$keyscript"; then
 		prmt="${extd}Please enter passphrase for $name: ${norm}"
-		setprompt
+		#setprompt
 	    fi
 
 	    # we always want a timeout to prevent accidential hanging boot
@@ -716,7 +718,7 @@ start_crypttab ()
 		    test "$luks" = 'yes' || params+=(-d /dev/stdin)
 		    ( $keyscript "$keyfile" | /sbin/cryptsetup "${params[@]}" "${cmd[@]}"; ) < $REDIRECT &> $REDIRECT
 	    else
-		    /sbin/cryptsetup ${keyfile:+-d $keyfile} "${params[@]}" "${cmd[@]}" < $REDIRECT &> $REDIRECT
+		    /sbin/cryptsetup ${keyfile:+-d $keyfile} --tries=0 "${params[@]}" "${cmd[@]}" < $REDIRECT &> $REDIRECT
 	    fi
 	    stat=$?
 
@@ -728,23 +730,14 @@ start_crypttab ()
 	    fi
 
 	    if test $stat -ne 0; then
-		report 1 "$name... "
-		doskip=1
-		failed=1
-		detachloopdev
-		break
-	    fi
-
-	    # run check if it's set
-	    if test -n "$check"; then
-		$check "/dev/mapper/$name" $checkargs
-		if test $? -ne 0; then
+		if test "$tried" -ge "$tries"; then
 		    report 1 "$name... "
 		    doskip=1
 		    failed=1
-		    /sbin/cryptsetup remove $name
-		    detachloopdev
 		    break
+		else
+		    tried=$((tried+1))
+		    continue
 		fi
 	    fi
 
@@ -758,38 +751,44 @@ start_crypttab ()
 	    fi
 	    test -z "$fs_passno" && fs_passno=0
 
-	    # run mkfs if the tmp option was given
-	    if test "$maketmp" = "yes"; then
-		echo "Creating filesystem on /dev/mapper/$name..."
-		if test "$fs_type" = 'auto'; then
-		    fs_type='ext2'
-		fi
-		/sbin/mkfs -t "$fs_type" /dev/mapper/$name
-
-		if test $? -ne 0; then
-		    report 1 "$phsdev: failed to create temporary file system."
-		    doskip=1
-		    failed=1
-		    /sbin/cryptsetup remove $name
-		    detachloopdev
+	    # run check if it's set
+	    if test -n "$check"; then
+		if $check "/dev/mapper/$name" $checkargs; then
 		    break
-		fi
-	    fi
-
-	    # no need for paranoid checks with luks as cryptsetup is able to
-	    # verify the passphrase itself then
-	    #
-	    # if the device is not in fstab we can't do paranoid checks as we
-	    # don't know what the intention of the device is
-	    if test "$makeswap" != 'yes' -a -z "$luks" -a -n "$infstab"; then
-		if test -z "$luks"; then
-		    paranoid_safety_checks "$fs_type" "/dev/mapper/$name" "$mountpoint" "$physdev"
-		    stat="$?"
-		    if test "$stat" = 1; then # retype passphrase
-			continue
-		    elif test "$stat" = 2; then # skip entry
-			report 5 "$name..."
+		else
+		    if test "$tried" -ge "$tries"; then
+			report 1 "$name... "
 			doskip=1
+			failed=1
+			break
+		    else
+			tried=$((tried+1))
+			continue
+		    fi
+		fi
+	    else
+		# no need for paranoid checks with luks as cryptsetup is able to
+		# verify the passphrase itself then
+		#
+		# if the device is not in fstab we can't do paranoid checks as we
+		# don't know what the intention of the device is
+		if test "$makeswap" != 'yes' \
+			-a "$maketmp" != 'yes' \
+			-a -z "$luks" \
+			-a -n "$infstab"; then
+		    if ! check_superblock "$fs_type" "/dev/mapper/$name"; then
+			echo "${warn}An error occurred. The passphrase could be wrong or the file system on"
+			echo "$physdev might be corrupted.${norm}"
+
+			if test "$tried" -ge "$tries"; then
+			    report 1 "$name... "
+			    doskip=1
+			    failed=1
+			    break
+			else
+			    tried=$((tried+1))
+			    continue
+			fi
 		    fi
 		fi
 	    fi
@@ -803,6 +802,24 @@ start_crypttab ()
 	    fi
 	    detachloopdev
 	    continue
+	fi
+
+	# run mkfs if the tmp option was given
+	if test "$maketmp" = "yes"; then
+	    echo "Creating filesystem on /dev/mapper/$name..."
+	    if test "$fs_type" = 'auto'; then
+		fs_type='ext2'
+	    fi
+	    /sbin/mkfs -t "$fs_type" /dev/mapper/$name
+
+	    if test $? -ne 0; then
+		report 1 "$phsdev: failed to create temporary file system."
+		doskip=1
+		failed=1
+		/sbin/cryptsetup remove "$name"
+		detachloopdev
+		continue
+	    fi
 	fi
 
 	# run mkswap if necessary. boot.swap with enable this later
