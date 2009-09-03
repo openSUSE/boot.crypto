@@ -105,7 +105,8 @@ also the *check* option.
 
 *tries*=<num>::
 Prompt for the passphrase at most <num> times if the entered
-passphrase was wrong. Defaults is 3. Only works for LUKS volumes.
+passphrase was wrong. Defaults is 3. Setting to 0 enabled infinite
+retries.
 
 *timeout*=<sec>::
 Time out interactive password prompts after <sec> seconds.

@@ -718,7 +718,7 @@ start_crypttab ()
 		    test "$luks" = 'yes' || params+=(-d /dev/stdin)
 		    ( $keyscript "$keyfile" | /sbin/cryptsetup "${params[@]}" "${cmd[@]}"; ) < $REDIRECT &> $REDIRECT
 	    else
-		    /sbin/cryptsetup ${keyfile:+-d $keyfile} --tries=0 "${params[@]}" "${cmd[@]}" < $REDIRECT &> $REDIRECT
+		    /sbin/cryptsetup ${keyfile:+-d $keyfile} --tries=1 "${params[@]}" "${cmd[@]}" < $REDIRECT &> $REDIRECT
 	    fi
 	    stat=$?
 
@@ -730,7 +730,9 @@ start_crypttab ()
 	    fi
 
 	    if test $stat -ne 0; then
-		if test "$tried" -ge "$tries"; then
+		# return value != 255 means some error with getting the key,
+		# like timeout or ^d. No retry in that case.
+		if test "$stat" -ne 255 -o \( "$tries" -ne 0 -a "$tried" -ge "$tries" \); then
 		    report 1 "$name... "
 		    doskip=1
 		    failed=1
@@ -756,7 +758,7 @@ start_crypttab ()
 		if $check "/dev/mapper/$name" $checkargs; then
 		    break
 		else
-		    if test "$tried" -ge "$tries"; then
+		    if test "$tries" -ne 0 -a "$tried" -ge "$tries"; then
 			report 1 "$name... "
 			doskip=1
 			failed=1
@@ -780,7 +782,7 @@ start_crypttab ()
 			echo "${warn}An error occurred. The passphrase could be wrong or the file system on"
 			echo "$physdev might be corrupted.${norm}"
 
-			if test "$tried" -ge "$tries"; then
+			if test "$tries" -ne 0 -a "$tried" -ge "$tries"; then
 			    report 1 "$name... "
 			    doskip=1
 			    failed=1
