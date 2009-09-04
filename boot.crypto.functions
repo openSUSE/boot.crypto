@@ -526,6 +526,7 @@ start_crypttab ()
 	    options=${options##,}
 	    param=${arg%%=*}
 	    value=${arg##$param=}
+	    test "$param" != "$value" || value=
 
 	    case "$param" in
 	    cipher)
