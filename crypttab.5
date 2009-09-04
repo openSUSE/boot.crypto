@@ -1,12 +1,12 @@
 .\"     Title: crypttab
 .\"    Author: [see the "AUTHOR" section]
 .\" Generator: DocBook XSL Stylesheets v1.74.0 <http://docbook.sf.net/>
-.\"      Date: 04/02/2009
+.\"      Date: 09/03/2009
 .\"    Manual: Cryptsetup Manual
 .\"    Source: cryptsetup
 .\"  Language: English
 .\"
-.TH "CRYPTTAB" "5" "04/02/2009" "cryptsetup" "Cryptsetup Manual"
+.TH "CRYPTTAB" "5" "09/03/2009" "cryptsetup" "Cryptsetup Manual"
 .\" -----------------------------------------------------------------
 .\" * (re)Define some macros
 .\" -----------------------------------------------------------------
@@ -339,7 +339,7 @@ option\&.
 .PP
 \fBtries\fR=<num>
 .RS 4
-Prompt for the passphrase at most <num> times if the entered passphrase was wrong\&. Defaults is 3\&. Only works for LUKS volumes\&.
+Prompt for the passphrase at most <num> times if the entered passphrase was wrong\&. Defaults is 3\&. Setting to 0 enabled infinite retries\&.
 .RE
 .PP
 \fBtimeout\fR=<sec>
@@ -379,7 +379,14 @@ Set a string that is appended to the passphrase after hashing\&. Using different
 Encrypts the hashed password <num> thousand times using AES\-256\&. Use for compatability with loop\-AES\&.
 .RE
 .PP
-\fBloud\fR, \fBssl\fR, \fBgpg\fR, \fBkeyscript\fR
+\fBkeyscript=<path>\fR
+.RS 4
+Calls <path> and uses the output as key\&. If <path> is not absolute
+\fB/lib/cryptsetup/scripts\fR
+is prepended\&. The only argument passed to the specified program is the value of the key column\&. keyscript also works in the initrd if the specified program is self contained\&. Note that use of a keyscript is not supported by YaST so distribution updates could be problematic when used on mandatory partitions\&.
+.RE
+.PP
+\fBloud\fR, \fBssl\fR, \fBgpg\fR
 .RS 4
 not supported\&. Listed here as they are supported by Debian\&.
 .RE
