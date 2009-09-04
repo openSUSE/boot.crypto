@@ -691,7 +691,7 @@ start_crypttab ()
 
 	    if test -z "$keyfile" -a -z "$keyscript"; then
 		prmt="${extd}Please enter passphrase for $name: ${norm}"
-		#setprompt
+		setprompt
 	    fi
 
 	    # we always want a timeout to prevent accidential hanging boot
