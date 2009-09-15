@@ -498,10 +498,10 @@ start_crypttab ()
 
 	test "$keyfile" != "none" || keyfile=""
 	test "$options" != "none" || options=""
-	crypttab_name="$name"
-	crypttab_device="$physdev"
-	crypttab_key="$keyfile"
-	unset ${!crypttab_option_*}
+	CRYPTTAB_NAME="$name"
+	CRYPTTAB_DEVICE="$physdev"
+	CRYPTTAB_KEY="$keyfile"
+	unset ${!CRYPTTAB_OPTION_*}
 
 	# parse the options field
 	skip=""
@@ -531,7 +531,7 @@ start_crypttab ()
 	    param=${arg%%=*}
 	    value=${arg##$param=}
 	    test "$param" != "$value" || value=
-	    eval "crypttab_option_$param=\"\${value:-yes}\""
+	    eval "CRYPTTAB_OPTION_$param=\"\${value:-yes}\""
 
 	    case "$param" in
 	    cipher)
@@ -722,7 +722,7 @@ start_crypttab ()
 	    if test -n "$keyscript"; then
 		    # must use /dev/stdin instead of "-" as cryptsetup would hash that
 		    test "$luks" = 'yes' || params+=(-d /dev/stdin)
-		    ( export ${!crypttab_*}; $keyscript "$keyfile" | /sbin/cryptsetup "${params[@]}" "${cmd[@]}"; ) < $REDIRECT &> $REDIRECT
+		    ( export ${!CRYPTTAB_*}; $keyscript "$keyfile" | /sbin/cryptsetup "${params[@]}" "${cmd[@]}"; ) < $REDIRECT &> $REDIRECT
 	    else
 		    /sbin/cryptsetup ${keyfile:+-d $keyfile} --tries=1 "${params[@]}" "${cmd[@]}" < $REDIRECT &> $REDIRECT
 	    fi
