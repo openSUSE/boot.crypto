@@ -620,7 +620,7 @@ start_crypttab ()
 
 	if test -n "$keyfile" -a -z "$keyscript"; then
 	    # make sure the keyfile exists
-	    if  ! -e "$keyfile"; then
+	    if  ! test -e "$keyfile"; then
 		report 5 "$name: $keyfile does not exist"
 		failed=1
 		continue
