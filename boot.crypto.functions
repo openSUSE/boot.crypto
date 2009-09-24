@@ -523,6 +523,7 @@ start_crypttab ()
 	itercountk=""
 	precheck=""
 	keyscript=""
+	keyscript_rawkey=""
 	tries="3"
 	while test -n "$options"; do
 	    arg=${options%%,*}
@@ -594,6 +595,7 @@ start_crypttab ()
 		fi
 		;;
 	    keyscript) keyscript="$value" ;;
+	    keyscript_rawkey) keyscript_rawkey="yes" ;;
 	    initrd) ;; # ignore here
 	    loud|ssl|gpg|*)
 		echo "unsupported crypttab option: '$param'"
@@ -712,16 +714,18 @@ start_crypttab ()
 		    # XXX hack
 		    if test -n "$pseed" -o -n "$itercountk"; then
 			keyscript=keyscript_hashalot
+			keyscript_rawkey=yes
 		    fi
-		    test -z "$halgo" || params+=(-h $halgo)
 		fi
-		params+=(${cipher:+-c $cipher} ${keysize:+-s $keysize})
+		params+=(${halgo:+-h $halgo} ${cipher:+-c $cipher} ${keysize:+-s $keysize})
 		cmd=(create "$name" "$device")
 	    fi
 
 	    if test -n "$keyscript"; then
 		    # must use /dev/stdin instead of "-" as cryptsetup would hash that
-		    test "$luks" = 'yes' || params+=(-d /dev/stdin)
+		    if test "$luks" != 'yes' -a "$keyscript_rawkey" = yes; then
+			    params+=(-d /dev/stdin)
+		    fi
 		    ( export ${!CRYPTTAB_*}; $keyscript "$keyfile" | /sbin/cryptsetup "${params[@]}" "${cmd[@]}"; ) < $REDIRECT &> $REDIRECT
 	    else
 		    /sbin/cryptsetup ${keyfile:+-d $keyfile} --tries=1 "${params[@]}" "${cmd[@]}" < $REDIRECT &> $REDIRECT
