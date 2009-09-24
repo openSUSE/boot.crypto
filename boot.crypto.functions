@@ -606,7 +606,7 @@ start_crypttab ()
 
 	if test -n "$luks"; then
 	    if test -n "$cipher" -o -n "$halgo" -o -n "$keysize" -o -n "$pseed" -o -n "$itercountk"; then
-		echo "cipher, hash, size, pseed and itercountk options are ignored for LUKS"
+		echo "${extd}Warning: cipher, hash, size, pseed and itercountk options are ignored for LUKS${norm}"
 	    fi
 	fi
 
@@ -628,8 +628,7 @@ start_crypttab ()
 		continue
 	    fi
 	    if test -n "$halgo" -o -n "$pseed" -o -n "$itercountk"; then
-		report 2 "${ext}hash, pseed and itercountk options are invalid when using a key file${norm}"
-		continue
+		echo "${extd}Warning: hash, pseed and itercountk options are ignored when using a key file${norm}"
 	    fi
 	fi
 
@@ -710,7 +709,7 @@ start_crypttab ()
 		luks='yes'
 		cmd=(luksOpen "$device" "$name")
 	    else
-		if test -z "$keyscript"; then
+		if test -z "$keyscript" -a -z "$keyfile"; then
 		    # XXX hack
 		    if test -n "$pseed" -o -n "$itercountk"; then
 			keyscript=keyscript_hashalot
