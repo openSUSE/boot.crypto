@@ -46,6 +46,7 @@ find_crypttab_initrd()
 		echo "keyscript \"$keyscript\" must be an executable" >&2
 		continue
 	    fi
+	    eval "luks_${name}_device=\"\$physdev\""
 	    eval "luks_${name}_keyscript=\"\$keyscript\""
 	    [ -z "$keyfile" ] || eval "luks_${name}_keyfile=\"\$keyfile\""
 	    eval "luks_${name}_options=\"\$options\""
@@ -86,6 +87,7 @@ if [ -x /sbin/cryptsetup -a -x /sbin/dmsetup ] ; then
 	    fi
 	    eval luks_${luks_name}=$(beautify_blockdev ${luksbd}) || continue
 	    save_var luks_${luks_name}
+	    save_var luks_${luks_name}_device
 	    ! isset luks_${luks_name}_options || save_var luks_${luks_name}_options
 	    ! isset luks_${luks_name}_keyfile || save_var luks_${luks_name}_keyfile
 	    if isset luks_${luks_name}_keyscript; then
