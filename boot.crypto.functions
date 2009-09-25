@@ -440,7 +440,7 @@ start_cryptotab ()
 # options are alreay parsed so we ignore the option parmeter ($2)
 keyscript_hashalot()
 {
-    local args="${halgo:+$halgo} -t $timeout ${pseed:+-s $pseed} ${itercountk:+-C $itercountk}"
+    local args="${hashalot_algo:+$hashalot_algo} -t $timeout ${pseed:+-s $pseed} ${itercountk:+-C $itercountk}"
     if test -n "$1"; then
 	/sbin/hashalot $args < $1
     else
@@ -523,7 +523,6 @@ start_crypttab ()
 	itercountk=""
 	precheck=""
 	keyscript=""
-	keyscript_rawkey=""
 	tries="3"
 	while test -n "$options"; do
 	    arg=${options%%,*}
@@ -595,7 +594,6 @@ start_crypttab ()
 		fi
 		;;
 	    keyscript) keyscript="$value" ;;
-	    keyscript_rawkey) keyscript_rawkey="yes" ;;
 	    initrd) ;; # ignore here
 	    loud|ssl|gpg|*)
 		echo "unsupported crypttab option: '$param'"
@@ -713,7 +711,8 @@ start_crypttab ()
 		    # XXX hack
 		    if test -n "$pseed" -o -n "$itercountk"; then
 			keyscript=keyscript_hashalot
-			keyscript_rawkey=yes
+			hashalot_algo="$halgo"
+			halgo=plain
 		    fi
 		fi
 		params+=(${halgo:+-h $halgo} ${cipher:+-c $cipher} ${keysize:+-s $keysize})
@@ -721,10 +720,6 @@ start_crypttab ()
 	    fi
 
 	    if test -n "$keyscript"; then
-		    # must use /dev/stdin instead of "-" as cryptsetup would hash that
-		    if test "$luks" != 'yes' -a "$keyscript_rawkey" = yes; then
-			    params+=(-d /dev/stdin)
-		    fi
 		    ( export ${!CRYPTTAB_*}; $keyscript "$keyfile" | /sbin/cryptsetup "${params[@]}" "${cmd[@]}"; ) < $REDIRECT &> $REDIRECT
 	    else
 		    /sbin/cryptsetup ${keyfile:+-d $keyfile} --tries=1 "${params[@]}" "${cmd[@]}" < $REDIRECT &> $REDIRECT
