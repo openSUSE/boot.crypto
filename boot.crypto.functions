@@ -524,6 +524,7 @@ start_crypttab ()
 	precheck=""
 	keyscript=""
 	tries="3"
+	crypttab_options=()
 	while test -n "$options"; do
 	    arg=${options%%,*}
 	    options=${options##$arg}
@@ -532,6 +533,7 @@ start_crypttab ()
 	    value=${arg##$param=}
 	    test "$param" != "$value" || value=
 	    eval "CRYPTTAB_OPTION_$param=\"\${value:-yes}\""
+	    crypttab_options+=("$param")
 
 	    case "$param" in
 	    cipher)
@@ -720,6 +722,7 @@ start_crypttab ()
 	    fi
 
 	    if test -n "$keyscript"; then
+		    CRYPTTAB_OPTIONS="${crypttab_options[*]}" # turn array into string
 		    ( export ${!CRYPTTAB_*}; $keyscript "$keyfile" | /sbin/cryptsetup "${params[@]}" "${cmd[@]}"; ) < $REDIRECT &> $REDIRECT
 	    else
 		    /sbin/cryptsetup ${keyfile:+-d $keyfile} --tries=1 "${params[@]}" "${cmd[@]}" < $REDIRECT &> $REDIRECT
