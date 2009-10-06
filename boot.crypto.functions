@@ -499,7 +499,7 @@ start_crypttab ()
 	test "$keyfile" != "none" || keyfile=""
 	test "$options" != "none" || options=""
 	CRYPTTAB_NAME="$name"
-	CRYPTTAB_DEVICE="$physdev"
+	CRYPTTAB_SOURCE="$physdev"
 	CRYPTTAB_KEY="$keyfile"
 	unset ${!CRYPTTAB_OPTION_*}
 
