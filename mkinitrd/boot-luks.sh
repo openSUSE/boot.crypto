@@ -66,7 +66,7 @@ do_luks() {
 					if [ -z "$pass" ]; then
 						local pass
 						echo
-						echo -n "Enter LUKS Passphrase:"
+						echo -n "Enter LUKS Passphrase: "
 						read -s pass
 						echo
 					fi
