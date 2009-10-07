@@ -11,7 +11,7 @@
 dev="$1"
 fs="$2"
 
-str=`/lib/udev/vol_id -t "$dev" 2>&1`
+str=`/sbin/blkid -c /dev/null -w /dev/null -s TYPE -o value "$dev" 2>&1`
 if [ "$?" -ne 0 ]; then
 	if [ "$str" = "$dev: unknown volume type" -a "$fs" = 'none' ]; then
 		exit 0
