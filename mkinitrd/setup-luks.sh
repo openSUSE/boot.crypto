@@ -3,6 +3,12 @@
 #%stage: crypto
 #
 
+dbg()
+{
+    test -n "$mkinitrd_luks_debug" || return 0
+    echo "$@"
+}
+
 # search for entries that have the 'initrd' option set
 find_crypttab_initrd()
 {
@@ -63,26 +69,42 @@ isset()
     eval "test -n \"\$$1\""
 }
 
-if [ -x /sbin/cryptsetup -a -x /sbin/dmsetup ] ; then
+find_luks_devices()
+{
     luks_blockdev=
     luks_add_device=()
     find_crypttab_initrd
+    set -- "${luks_add_device[@]}" $blockdev
     # bd holds the device we see the decrypted LUKS partition as
-    for bd in "${luks_add_device[@]}" $blockdev; do
+    while [ "$#" -gt 0 ]; do
+	bd="$1"; shift
     	luks_name=
 	update_blockdev $bd
 	luks_blockmajor=$blockmajor
 	luks_blockminor=$blockminor
+	dbg "finding deps of $bd ($blockmajor:$blockminor) ..."
+	deps=$(dm_resolvedeps $bd)
 	# luksbd holds the device, LUKS is running on
-	for luksbd in $(dm_resolvedeps $bd); do # should only be one for luks
+	for luksbd in $deps; do # should be only one for luks
 	    update_blockdev $luksbd
-	    /sbin/cryptsetup isLuks $luksbd 2>/dev/null || continue
+	    dbg -n "isLuks $luksbd ... "
+	    if ! /sbin/cryptsetup isLuks $luksbd 2>/dev/null; then
+		dbg -n "no"
+		if [ "$blockdriver" = "device-mapper" ]; then
+		    dbg -n ", but dm, requeue"
+		    # the block device is on dm itself
+		    set -- "$@" "$luksbd"
+		fi
+		dbg
+		continue
+	    fi
+	    dbg "yes"
 	    root_luks=1
 	    tmp_root_dm=1 # luks needs dm
 
 	    luks_name="$(dmsetup -c info -o name --noheadings -j $luks_blockmajor -m $luks_blockminor)"
 	    if isset "luks_${luks_name}"; then
-		echo "$luksname already handled"
+		dbg "$luks_name already handled"
 		continue
 	    fi
 	    eval luks_${luks_name}=$(beautify_blockdev ${luksbd}) || continue
@@ -99,7 +121,7 @@ if [ -x /sbin/cryptsetup -a -x /sbin/dmsetup ] ; then
 	    fi
 
 	    luks="$luks $luks_name"
-	    echo "enabling LUKS support for $luksbd"
+	    echo "enabling LUKS support for $luksbd ($luks_name)"
 	    luks_blockdev="$luks_blockdev $luksbd"
 	done
 	if [ ! "$luks_name" ]; then # no luks found
@@ -107,6 +129,10 @@ if [ -x /sbin/cryptsetup -a -x /sbin/dmsetup ] ; then
 	fi
     done
     blockdev="$luks_blockdev"
+}
+
+if [ -x /sbin/cryptsetup -a -x /sbin/dmsetup ] ; then
+    find_luks_devices
 fi
 
 if [ -n "$root_luks" ]; then
