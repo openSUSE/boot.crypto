@@ -12,6 +12,7 @@ dbg()
 # search for entries that have the 'initrd' option set
 find_crypttab_initrd()
 {
+    luks_add_device=()
     test -s /etc/crypttab || return
 
     local addit extraopts
@@ -59,12 +60,8 @@ isset()
 find_luks_devices()
 {
     luks_blockdev=
-    luks_add_device=()
-    find_crypttab_initrd
-    set -- "${luks_add_device[@]}" $blockdev
     # bd holds the device we see the decrypted LUKS partition as
-    while [ "$#" -gt 0 ]; do
-	bd="$1"; shift
+    for bd in "${luks_add_device[@]}" $blockdev; do
     	luks_name=
 	update_blockdev $bd
 	luks_blockmajor=$blockmajor
@@ -76,13 +73,7 @@ find_luks_devices()
 	    update_blockdev $luksbd
 	    dbg -n "isLuks $luksbd ... "
 	    if ! /sbin/cryptsetup isLuks $luksbd 2>/dev/null; then
-		dbg -n "no"
-		if [ "$blockdriver" = "device-mapper" ]; then
-		    dbg -n ", but dm, requeue"
-		    # the block device is on dm itself
-		    set -- "$@" "$luksbd"
-		fi
-		dbg
+		dbg "no"
 		continue
 	    fi
 	    dbg "yes"
@@ -109,25 +100,7 @@ find_luks_devices()
     blockdev="$luks_blockdev"
 }
 
-if [ -x /sbin/cryptsetup -a -x /sbin/dmsetup ] ; then
-    find_luks_devices
-fi
+find_crypttab_initrd
+unset luks_add_device
 
-if [ -n "$root_luks" ]; then
-    case "$LANG" in
-	en_*|POSIX)
-	    # We only support english keyboard layout currently
-	    ;;
-	*)
-	    echo "Only english keyboard layout supported."
-	    echo "Please ensure that the password is typed correctly."
-	    luks_lang="$LANG"
-	    ;;
-    esac
-    cryptmodules=`sed -ne '/^module/s/.*: //p' < /proc/crypto`
-fi
-
-save_var root_luks	# do we have luks?
-save_var luks		# which names do the luks devices have?
-save_var cryptmodules	# required kernel modules for crypto setup
-save_var luks_lang	# original language settings
+find_luks_devices

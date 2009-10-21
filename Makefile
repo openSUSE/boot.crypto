@@ -35,7 +35,7 @@ install: crypttab.5 cryptotab.5
 	install -m 644 cryptotab.5 $(DESTDIR)$(mandir)/man5
 	install -m 644 /dev/null $(DESTDIR)$(sysconfdir)/cryptotab
 	install -m 644 /dev/null $(DESTDIR)$(sysconfdir)/crypttab
-	install -m 755 mkinitrd/setup-luks.sh $(DESTDIR)$(initrdscriptsdir)/setup-luks.sh
+	install -m 755 mkinitrd/setup-luks*.sh $(DESTDIR)$(initrdscriptsdir)/
 	install -m 755 mkinitrd/boot-luks.sh $(DESTDIR)$(initrdscriptsdir)/boot-luks.sh
 
 html: crypttab.5.html cryptotab.5.html
