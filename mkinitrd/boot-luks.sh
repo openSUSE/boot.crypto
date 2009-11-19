@@ -57,3 +57,14 @@ do_luks() {
 }
 
 do_luks
+
+# XXX: activate and wait for volume groups if the resume volume is
+# on lvm. This is a layering violation but with current mkinitrd
+# design we have no other choice if we want to resume from a vg
+# inside luks.
+if [ -n "$vg_resume" ]; then
+	for vgr in $vg_root $vg_resume $vg_roots; do
+		vgchange -a y $vgr
+	done
+	wait_for_events
+fi
