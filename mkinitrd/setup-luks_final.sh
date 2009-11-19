@@ -5,6 +5,16 @@
 
 curscript=luks.sh # XXX: to save variables in same config file
 
+check_cryptomgr_needed()
+{
+    local ver=`echo "$kernel_version" | sed  -ne '/^2\.6\.\([0-9]\+\).*/s/^2\.6\.\([0-9]\+\).*/\1/p'`
+    if [ -n "$ver" -a -z "${ver//[0-9]}" ] && [ "$ver" -lt 31 ]; then
+	: # not needed on < 2.6.31
+    else
+	cryptmodules="$cryptmodules cryptomgr"
+    fi
+}
+
 if use_script luks; then
     if [ -n "$root_luks" ]; then
 	case "$LANG" in
@@ -19,6 +29,8 @@ if use_script luks; then
 	esac
 	cryptmodules=`sed -ne '/^module/s/.*: //p' < /proc/crypto`
     fi
+    
+    check_cryptomgr_needed
 
     save_var root_luks	# do we have luks?
     save_var luks		# which names do the luks devices have?
