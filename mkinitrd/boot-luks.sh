@@ -1,7 +1,7 @@
 #!/bin/bash
 #%stage: crypto
 #%programs: /sbin/cryptsetup $cryptprograms
-#%udevmodules: dm-crypt cryptomgr $cryptmodules
+#%udevmodules: dm-crypt $cryptmodules
 #%if: "$root_luks" -o "$luks"
 #
 ##### LUKS (comfortable disk encryption)
