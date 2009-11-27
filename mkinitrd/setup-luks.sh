@@ -64,6 +64,7 @@ find_luks_devices()
     for bd in "${luks_add_device[@]}" $blockdev; do
     	luks_name=
 	update_blockdev $bd
+	[ "$blockdriver" = "device-mapper" ] || continue
 	luks_blockmajor=$blockmajor
 	luks_blockminor=$blockminor
 	dbg "finding deps of $bd ($blockmajor:$blockminor) ..."
@@ -101,6 +102,5 @@ find_luks_devices()
 }
 
 find_crypttab_initrd
-unset luks_add_device
-
 find_luks_devices
+unset luks_add_device
