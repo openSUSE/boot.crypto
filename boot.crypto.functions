@@ -486,7 +486,7 @@ start_crypttab ()
 	fi
 
 	if ! test -e $physdev ; then
-            if test "$CRYPT_EARLY" == "yes"; then
+            if test "$CRYPT_EARLY" = "yes"; then
                 report 5 "$physdev does not exist (missing noearly option in /etc/crypttab?)"
             else
                 report 5 "$physdev does not exist"
@@ -842,7 +842,7 @@ start_crypttab ()
 
 	# if called from boot.crypto-early skip the rest,
 	# since fsck and mount is done in boot.localfs
-	if test "$CRYPT_EARLY" == "yes"; then
+	if test "$CRYPT_EARLY" = "yes"; then
 	    continue
 	fi
 
