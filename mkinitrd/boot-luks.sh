@@ -15,6 +15,14 @@
 ## luks_xxx		the luks device (e.g. /dev/sda)
 ## 
 
+if test -t 1 -a "$TERM" != "raw" -a "$TERM" != "dumb"; then
+	extd="\e[1m"
+	norm="\e[m"
+else
+	extd=''
+	norm=''
+fi
+
 # can't do this in luksopen as it would mix output with the
 # keyscript
 luks_wait_device()
@@ -28,6 +36,7 @@ luksopen()
 {
 	local name="$1"
 	eval local dev="\"\${luks_${luks}}\""
+	echo -e "${extd}Unlocking ${name} ($dev)${norm}"
 	/sbin/cryptsetup --tries=1 luksOpen "$dev" "$name"
 }
 
@@ -66,6 +75,7 @@ do_luks() {
 					if [ -z "$pass" ]; then
 						local pass
 						echo
+						echo -e "${extd}Need to unlock encrypted volumes${norm}"
 						echo -n "Enter LUKS Passphrase: "
 						read -s pass
 						echo
