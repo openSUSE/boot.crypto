@@ -50,9 +50,6 @@ splash=""
 did_redirect=""
 otty=$(stty -g)
 
-ppid=0
-prmt=""
-
 redirect ()
 {
     test -z "$did_redirect" || return 0
@@ -80,34 +77,17 @@ restore ()
 
 setprompt ()
 {
-    read rows cols < <(stty size -F $REDIRECT 2>/dev/null)
-    test -z "$cols" && cols=0
-    if test -t 1 -a "$TERM" != "raw" -a "$TERM" != "dumb" && stty size <&1 > /dev/null 2>&1 && test $cols -gt ${#prmt}
-    then
-	(
-	    trap "exit 0" SIGTERM
-	    trap "echo" SIGINT SIGSEGV
-	    usleep 15000
-	    while true; do
-		# cursor to start of line, erase line, print prompt
-		echo -en "\r\e[2K${prmt}"
-		sleep 2
-	    done
-	) & ppid=$!
-	trap unsetprompt EXIT
-    else
-	usleep 15000
-	echo -en "\r${prmt}"
-	ppid=0
+    if [ -n "$RUNLEVEL" ]; then
+	/usr/bin/setterm -msg off
     fi
+    echo -e "$@"
 }
 
 unsetprompt ()
 {
-    local ret=$?
-    test $ppid -gt 0 && kill -15 $ppid
-    ppid=0
-    return $ret
+    if [ -n "$RUNLEVEL" ]; then
+	/usr/bin/setterm -msg on
+    fi
 }
 
 reverse ()
@@ -362,9 +342,9 @@ start_cryptotab ()
 	    # Setting up loop device
 	    #
 	    if test -n "$info" ; then
-		prmt="${extd}Please enter passphrase for \"$info\" ($physdev): ${norm}"
+		local prmt="${extd}Unlocking \"$info\" ($physdev)${norm}"
 	    else
-		prmt="${extd}Please enter passphrase for $physdev: ${norm}"
+		local prmt="${extd}Unlocking $physdev${norm}"
 	    fi
 
 	    # we always use a loop device to avoid block size issues
@@ -377,7 +357,7 @@ start_cryptotab ()
 	    
 	    local params="-t $timeout -c $cipher -s $keylen -h $hashalgo"
 
-	    setprompt
+	    setprompt "$prmt"
 	    /sbin/cryptsetup $params create "$name" "$device" < $REDIRECT > $REDIRECT 2>&1
 	    stat=$?
 	    unsetprompt
@@ -691,8 +671,7 @@ start_crypttab ()
 	    fi
 
 	    if test -z "$keyfile" -a -z "$keyscript"; then
-		prmt="${extd}Please enter passphrase for $name: ${norm}"
-		setprompt
+		setprompt "${extd}Unlocking ${name} ($physdev)${norm}"
 	    fi
 
 	    # we always want a timeout to prevent accidential hanging boot
