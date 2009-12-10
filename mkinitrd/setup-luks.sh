@@ -64,7 +64,7 @@ find_luks_devices()
     for bd in "${luks_add_device[@]}" $blockdev; do
     	luks_name=
 	update_blockdev $bd
-	if [ "$blockdriver" = "device-mapper" ]; then
+	if [ "$blockdriver" != "device-mapper" ]; then
 	    luks_blockdev="$luks_blockdev $bd"
 	    continue
 	fi
