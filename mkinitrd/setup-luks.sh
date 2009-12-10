@@ -64,7 +64,10 @@ find_luks_devices()
     for bd in "${luks_add_device[@]}" $blockdev; do
     	luks_name=
 	update_blockdev $bd
-	[ "$blockdriver" = "device-mapper" ] || continue
+	if [ "$blockdriver" = "device-mapper" ]; then
+	    luks_blockdev="$luks_blockdev $bd"
+	    continue
+	fi
 	luks_blockmajor=$blockmajor
 	luks_blockminor=$blockminor
 	dbg "finding deps of $bd ($blockmajor:$blockminor) ..."
