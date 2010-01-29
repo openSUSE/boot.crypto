@@ -101,6 +101,18 @@ reverse ()
     done
 }
 
+# we may need to initialize the random number generator if random
+# keys are used as /etc/init.d/random runs later
+init_random()
+{
+    # assume random is seeded in running system
+    test "$base" != "$link" || return 0
+
+    local random_seed=/var/lib/misc/random-seed
+    test -f $random_seed || return 1
+    cat $random_seed > /dev/urandom
+}
+
 check_loop_module ()
 {
     if test ! -d /sys/block/loop0; then
@@ -608,7 +620,13 @@ start_crypttab ()
 		continue
 	    fi
 	    if test -n "$halgo" -o -n "$pseed" -o -n "$itercountk"; then
-		echo "${extd}Warning: hash, pseed and itercountk options are ignored when using a key file${norm}"
+		report 2 "${ext}hash, pseed and itercountk options are unused when using a key file${norm}"
+	    fi
+	    if test "$keyfile" = /dev/random -o "$keyfile" = /dev/urandom &&
+		! init_random; then
+		report 5 "$physdev: failed to initialize random number generator. /var on separate partition?"
+		failed=1
+		continue
 	    fi
 	fi
 
@@ -1224,4 +1242,3 @@ customize_stop_hook ()
 	/etc/init.d/$srv reload
     done
 }
-
