@@ -172,19 +172,44 @@ no checkargs:: succeeds if any valid filesystem is found on the device.
 "ext3", "xfs", "swap" etc:: succeeds if the given filesystem type is found on
 the device.
 
+UNLOCKING DEVICES AT BOOT TIME
+------------------------------
+
+There are three ways to unlock encrypted partitions during boot
+
+- initrd: the root file system as well as any device listed in
+  crypttab with option 'initrd' are unlocked by the scripts in the
+  initrd already.
+
+- before mounting local file systems: the init script
+  'boot.crypto-early' runs before the scripts that fsck and mount
+  additional filesystems. This is the preferred way to unlock
+  devices as the normal fsck and mount scripts can handle the device
+  later in the boot process.
+
+- after mounting local file systems: the 'boot.crypto' init script
+  is the traditional way of unlocking crypto devices. It runs after
+  fsck and mount of local file systems. 'boot.crypto' should only be
+  used for loop mounted images nowadays.
+
+FSCK
+----
+fsck is run on unlocked, encrypted devices if the fs_passno value in
+fstab is non zero.
+
 EXAMPLES
 --------
 *Encrypted swap device*::
-cswap /dev/sda6 /dev/random swap
+cr_sda6 /dev/sda6 /dev/random swap
 
 *Encrypted luks volume with interactive password*::
-cdisk0 /dev/hda1 none luks
+cr_sda1 /dev/sda1 none luks
 
 *Encrypted luks volume with interactive password, use a custom check script, no retries*::
-cdisk2 /dev/hdc1 none luks,check=customscript,checkargs=foo,tries=1
+cr_sdc1 /dev/sdc1 none luks,check=customscript,checkargs=foo,tries=1
 
 *Encrypted volume with interactive password and a cryptoloop compatible twofish256 cipher*::
-cdisk3 /dev/sda3 none cipher=twofish-cbc-plain,size=256,hash=sha512
+cr_sda3 /dev/sda3 none cipher=twofish-cbc-plain,size=256,hash=sha512
 
 SEE ALSO
 --------
