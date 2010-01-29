@@ -100,6 +100,18 @@ reverse ()
     done
 }
 
+# we may need to initialize the random number generator if random
+# keys are used as /etc/init.d/random runs later
+init_random()
+{
+    # assume random is seeded in running system
+    test "$base" != "$link" || return 0
+
+    local random_seed=/var/lib/misc/random-seed
+    test -f $random_seed || return 1
+    cat $random_seed > /dev/urandom
+}
+
 check_loop_module ()
 {
     if test ! -d /sys/block/loop0; then
@@ -549,12 +561,6 @@ start_crypttab ()
 		echo "cipher, hash, size, pseed and itercountk options are ignored for LUKS"
 	    fi
 	fi
-	if test -n "$keyfile"; then
-	    if test -n "$halgo" -o -n "$pseed" -o -n "$itercountk"; then
-		report 2 "${ext}hash, pseed and itercountk options are invalid when using a key file${norm}"
-		continue
-	    fi
-	fi
 
 	if test "$skip" = "yes" -o \( "$noauto" = "yes" -a -z "$tostart" \); then
 	    report 5 "$physdev"
@@ -564,6 +570,19 @@ start_crypttab ()
 	if test "$CRYPT_EARLY" = "yes" -a "$noearly" = "yes"; then
 	    report 5 "skipping $physdev (noearly)"
 	    continue
+	fi
+
+	if test -n "$keyfile"; then
+	    if test -n "$halgo" -o -n "$pseed" -o -n "$itercountk"; then
+		report 2 "${ext}hash, pseed and itercountk options are invalid when using a key file${norm}"
+		continue
+	    fi
+	    if test "$keyfile" = /dev/random -o "$keyfile" = /dev/urandom &&
+		! init_random; then
+		report 5 "$physdev: failed to initialize random number generator. /var on separate partition?"
+		failed=1
+		continue
+	    fi
 	fi
 
 	# run precheck if it's set
@@ -1115,4 +1134,3 @@ cutomize_stop_hook ()
 	/etc/init.d/$srv reload
     done
 }
-
