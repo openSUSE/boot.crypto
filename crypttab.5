@@ -1,161 +1,13 @@
+'\" t
 .\"     Title: crypttab
 .\"    Author: [see the "AUTHOR" section]
-.\" Generator: DocBook XSL Stylesheets v1.74.0 <http://docbook.sf.net/>
-.\"      Date: 09/25/2009
+.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
+.\"      Date: 02/02/2010
 .\"    Manual: Cryptsetup Manual
 .\"    Source: cryptsetup
 .\"  Language: English
 .\"
-.TH "CRYPTTAB" "5" "09/25/2009" "cryptsetup" "Cryptsetup Manual"
-.\" -----------------------------------------------------------------
-.\" * (re)Define some macros
-.\" -----------------------------------------------------------------
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" toupper - uppercase a string (locale-aware)
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de toupper
-.tr aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ
-\\$*
-.tr aabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" SH-xref - format a cross-reference to an SH section
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de SH-xref
-.ie n \{\
-.\}
-.toupper \\$*
-.el \{\
-\\$*
-.\}
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" SH - level-one heading that works better for non-TTY output
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de1 SH
-.\" put an extra blank line of space above the head in non-TTY output
-.if t \{\
-.sp 1
-.\}
-.sp \\n[PD]u
-.nr an-level 1
-.set-an-margin
-.nr an-prevailing-indent \\n[IN]
-.fi
-.in \\n[an-margin]u
-.ti 0
-.HTML-TAG ".NH \\n[an-level]"
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-\." make the size of the head bigger
-.ps +3
-.ft B
-.ne (2v + 1u)
-.ie n \{\
-.\" if n (TTY output), use uppercase
-.toupper \\$*
-.\}
-.el \{\
-.nr an-break-flag 0
-.\" if not n (not TTY), use normal case (not uppercase)
-\\$1
-.in \\n[an-margin]u
-.ti 0
-.\" if not n (not TTY), put a border/line under subheading
-.sp -.6
-\l'\n(.lu'
-.\}
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" SS - level-two heading that works better for non-TTY output
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de1 SS
-.sp \\n[PD]u
-.nr an-level 1
-.set-an-margin
-.nr an-prevailing-indent \\n[IN]
-.fi
-.in \\n[IN]u
-.ti \\n[SN]u
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.ps \\n[PS-SS]u
-\." make the size of the head bigger
-.ps +2
-.ft B
-.ne (2v + 1u)
-.if \\n[.$] \&\\$*
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" BB/BE - put background/screen (filled box) around block of text
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de BB
-.if t \{\
-.sp -.5
-.br
-.in +2n
-.ll -2n
-.gcolor red
-.di BX
-.\}
-..
-.de EB
-.if t \{\
-.if "\\$2"adjust-for-leading-newline" \{\
-.sp -1
-.\}
-.br
-.di
-.in
-.ll
-.gcolor
-.nr BW \\n(.lu-\\n(.i
-.nr BH \\n(dn+.5v
-.ne \\n(BHu+.5v
-.ie "\\$2"adjust-for-leading-newline" \{\
-\M[\\$1]\h'1n'\v'+.5v'\D'P \\n(BWu 0 0 \\n(BHu -\\n(BWu 0 0 -\\n(BHu'\M[]
-.\}
-.el \{\
-\M[\\$1]\h'1n'\v'-.5v'\D'P \\n(BWu 0 0 \\n(BHu -\\n(BWu 0 0 -\\n(BHu'\M[]
-.\}
-.in 0
-.sp -.5v
-.nf
-.BX
-.in
-.sp .5v
-.fi
-.\}
-..
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" BM/EM - put colored marker in margin next to block of text
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.de BM
-.if t \{\
-.br
-.ll -2n
-.gcolor red
-.di BX
-.\}
-..
-.de EM
-.if t \{\
-.br
-.di
-.ll
-.gcolor
-.nr BH \\n(dn
-.ne \\n(BHu
-\M[\\$1]\D'P -.75n 0 0 \\n(BHu -(\\n[.i]u - \\n(INu - .75n) 0 0 -\\n(BHu'\M[]
-.in 0
-.nf
-.BX
-.in
-.fi
-.\}
-..
+.TH "CRYPTTAB" "5" "02/02/2010" "cryptsetup" "Cryptsetup Manual"
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
@@ -166,9 +18,9 @@
 .\" -----------------------------------------------------------------
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
-.SH "Name"
+.SH "NAME"
 crypttab \- static information about crypted filesystems
-.SH "Synopsis"
+.SH "SYNOPSIS"
 .PP
 \fBcrypttab\fR
 .RS 4
@@ -366,7 +218,7 @@ boot\&.crypto is invoked two times\&. The first time as boot\&.crypto\-early bef
 .PP
 \fBinitrd\fR
 .RS 4
-tells mkinitrd to activate this device in the initrd already\&. Only LUKS and no other options are supported\&. The root partition is detected automatically by mkinitrd and doesn\'t need this option explicitly\&.
+tells mkinitrd to activate this device in the initrd already\&. Only LUKS and no other options are supported\&. The root partition is detected automatically by mkinitrd and doesn\(cqt need this option explicitly\&.
 .RE
 .PP
 \fBpseed=<string>\fR
@@ -383,7 +235,7 @@ Encrypts the hashed password <num> thousand times using AES\-256\&. Use for comp
 .RS 4
 Calls <path> and uses the output passphrase or key\&. If <path> is not absolute
 \fB/lib/cryptsetup/scripts\fR
-is prepended\&. The only argument passed to the specified program is the value of the key column\&. keyscript also works in the initrd if the specified program is self contained\&. To use the output as raw key specify hash=plain so cryptsetup doesn\'t hash it\'s input\&. Note that use of a keyscript is not supported by YaST so distribution updates could be problematic when used on mandatory partitions\&.
+is prepended\&. The only argument passed to the specified program is the value of the key column\&. keyscript also works in the initrd if the specified program is self contained\&. To use the output as raw key specify hash=plain so cryptsetup doesn\(cqt hash it\(cqs input\&. Note that use of a keyscript is not supported by YaST so distribution updates could be problematic when used on mandatory partitions\&.
 .RE
 .PP
 \fBloud\fR, \fBssl\fR, \fBgpg\fR
@@ -392,55 +244,95 @@ not supported\&. Listed here as they are supported by Debian\&.
 .RE
 .SH "CHECKSCRIPTS"
 .sp
-check scripts are installed in \FC/lib/cryptsetup/checks/\F[] and are called either before (\fIprecheck\fR option) or after (\fIcheck\fR option) the dm\-crypt target is set up\&.
+check scripts are installed in /lib/cryptsetup/checks/ and are called either before (\fIprecheck\fR option) or after (\fIcheck\fR option) the dm\-crypt target is set up\&.
 .PP
 \fBvol_id\fR
 .RS 4
 
 Checks for any known filesystem\&. Supports a filesystem type as argument via <checkargs>:
-.TS
-tab(:);
-lt lt
-lt lt
-lt lt.
-T{
-no checkargs
-T}:T{
-succeeds if any valid filesystem is found on the device\&.
-T}
-T{
-"none"
-T}:T{
-succeeds if no valid filesystem is found on the device\&.
-T}
-T{
-"ext3", "xfs", "swap" etc
-T}:T{
-succeeds if the given filesystem type is found on the device\&.
-T}
-.TE
-.sp 1
 .RE
+.PP
+no checkargs
+.RS 4
+succeeds if any valid filesystem is found on the device\&.
+.RE
+.PP
+"none"
+.RS 4
+succeeds if no valid filesystem is found on the device\&.
+.RE
+.PP
+"ext3", "xfs", "swap" etc
+.RS 4
+succeeds if the given filesystem type is found on the device\&.
+.RE
+.SH "UNLOCKING DEVICES AT BOOT TIME"
+.sp
+There are three ways to unlock encrypted partitions during boot
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+initrd: the root file system as well as any device listed in crypttab with option
+\fIinitrd\fR
+are unlocked by the scripts in the initrd already\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+before mounting local file systems: the init script
+\fIboot\&.crypto\-early\fR
+runs before the scripts that fsck and mount additional filesystems\&. This is the preferred way to unlock devices as the normal fsck and mount scripts can handle the device later in the boot process\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+after mounting local file systems: the
+\fIboot\&.crypto\fR
+init script is the traditional way of unlocking crypto devices\&. It runs after fsck and mount of local file systems\&.
+\fIboot\&.crypto\fR
+should only be used for loop mounted images nowadays\&.
+.RE
+.SH "FSCK"
+.sp
+fsck is run on unlocked, encrypted devices if the fs_passno value in fstab is non zero\&.
 .SH "EXAMPLES"
 .PP
 \fBEncrypted swap device\fR
 .RS 4
-cswap /dev/sda6 /dev/random swap
+cr_sda6 /dev/sda6 /dev/random swap
 .RE
 .PP
 \fBEncrypted luks volume with interactive password\fR
 .RS 4
-cdisk0 /dev/hda1 none luks
+cr_sda1 /dev/sda1 none luks
 .RE
 .PP
 \fBEncrypted luks volume with interactive password, use a custom check script, no retries\fR
 .RS 4
-cdisk2 /dev/hdc1 none luks,check=customscript,checkargs=foo,tries=1
+cr_sdc1 /dev/sdc1 none luks,check=customscript,checkargs=foo,tries=1
 .RE
 .PP
 \fBEncrypted volume with interactive password and a cryptoloop compatible twofish256 cipher\fR
 .RS 4
-cdisk3 /dev/sda3 none cipher=twofish\-cbc\-plain,size=256,hash=sha512
+cr_sda3 /dev/sda3 none cipher=twofish\-cbc\-plain,size=256,hash=sha512
 .RE
 .SH "SEE ALSO"
 .sp
