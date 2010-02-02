@@ -585,7 +585,7 @@ start_crypttab ()
 	fi
 
 	if test "$CRYPT_EARLY" = "yes" -a "$noearly" = "yes"; then
-	    report 5 "skipping $name (noearly)"
+	    report 5 "$name... will be set up later"
 	    continue
 	fi
 
@@ -840,6 +840,7 @@ start_crypttab ()
 	# if called from boot.crypto-early skip the rest,
 	# since fsck and mount is done in boot.localfs
 	if test "$CRYPT_EARLY" = "yes"; then
+	    report 0 "$name..."
 	    continue
 	fi
 
