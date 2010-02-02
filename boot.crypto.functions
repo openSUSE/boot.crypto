@@ -471,23 +471,6 @@ start_crypttab ()
 
 	makeabsolute physdev
 
-	# skip mapped entries
-	if test -e /dev/mapper/$name; then
-	    report 5 "$name: already mapped"
-	    continue
-	fi
-
-	if ! test -e $physdev ; then
-            if test "$CRYPT_EARLY" = "yes"; then
-                report 5 "$physdev does not exist (missing noearly option in /etc/crypttab?)"
-            else
-                report 5 "$physdev does not exist"
-            fi
-
-	    failed=1
-	    continue
-	fi
-
 	test "$keyfile" != "none" || keyfile=""
 	test "$options" != "none" || options=""
 	CRYPTTAB_NAME="$name"
@@ -596,6 +579,33 @@ start_crypttab ()
 	    esac
 	done
 
+	if test "$skip" = "yes" -o \( "$noauto" = "yes" -a -z "$tostart" \); then
+	    report 5 "$name"
+	    continue
+	fi
+
+	if test "$CRYPT_EARLY" = "yes" -a "$noearly" = "yes"; then
+	    report 5 "skipping $name (noearly)"
+	    continue
+	fi
+
+	# skip mapped entries
+	if test -e /dev/mapper/$name; then
+	    report 5 "$name: already mapped"
+	    continue
+	fi
+
+	if ! test -e $physdev ; then
+            if test "$CRYPT_EARLY" = "yes"; then
+                report 5 "$physdev does not exist (missing noearly option in /etc/crypttab?)"
+            else
+                report 5 "$physdev does not exist"
+            fi
+
+	    failed=1
+	    continue
+	fi
+
 	if test -n "$luks"; then
 	    if test -n "$cipher" -o -n "$halgo" -o -n "$keysize" -o -n "$pseed" -o -n "$itercountk"; then
 		echo "${extd}Warning: cipher, hash, size, pseed and itercountk options are ignored for LUKS${norm}"
@@ -628,16 +638,6 @@ start_crypttab ()
 		failed=1
 		continue
 	    fi
-	fi
-
-	if test "$skip" = "yes" -o \( "$noauto" = "yes" -a -z "$tostart" \); then
-	    report 5 "$name"
-	    continue
-	fi
-
-	if test "$CRYPT_EARLY" = "yes" -a "$noearly" = "yes"; then
-	    report 5 "skipping $name (noearly)"
-	    continue
 	fi
 
 	# run precheck if it's set
