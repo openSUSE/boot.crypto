@@ -23,6 +23,24 @@ else
 	norm=''
 fi
 
+slash_read()
+{
+	splash=""
+	if test -e /proc/splash ; then
+		read splash  < /proc/splash
+	fi
+}
+
+splash_off()
+{
+	[ -z "$splash" ] || echo verbose > /proc/splash
+}
+
+splash_restore()
+{
+	[ -z "$splash" ] || echo "$splash" > /proc/splash
+}
+
 # can't do this in luksopen as it would mix output with the
 # keyscript
 luks_wait_device()
@@ -37,6 +55,7 @@ luksopen()
 	local name="$1"
 	eval local dev="\"\${luks_${luks}}\""
 	echo -e "${extd}Unlocking ${name} ($dev)${norm}"
+	splash_off
 	/sbin/cryptsetup --tries=1 luksOpen "$dev" "$name"
 }
 
@@ -73,6 +92,7 @@ do_luks() {
 				# devices are to be decrypted
 				if [ -n "$reuse_pass" ]; then
 					if [ -z "$pass" ]; then
+						splash_off
 						local pass
 						echo
 						echo -e "${extd}Need to unlock encrypted volumes${norm}"
@@ -101,6 +121,8 @@ do_luks() {
 	fi
 }
 
+splash_read
+
 do_luks
 
 # XXX: activate and wait for volume groups if the resume volume is
@@ -113,3 +135,5 @@ if [ -n "$vg_resume" ]; then
 	done
 	wait_for_events
 fi
+
+splash_restore
