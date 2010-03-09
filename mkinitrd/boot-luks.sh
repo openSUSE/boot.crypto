@@ -23,11 +23,15 @@ else
 	norm=''
 fi
 
-slash_read()
+splash_read()
 {
 	splash=""
 	if test -e /proc/splash ; then
 		read splash  < /proc/splash
+		case "$splash" in
+			*silent*) splash='silent' ;;
+			*) splash='' ;;
+		esac
 	fi
 }
 

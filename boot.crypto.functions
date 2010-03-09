@@ -54,10 +54,6 @@ redirect ()
 {
     test -z "$did_redirect" || return 0
     did_redirect=1
-    if test -e /proc/splash ; then
-	read splash  < /proc/splash
-	echo verbose > /proc/splash
-    fi
     test -z "$otty" || stty "$otty" < $REDIRECT;
     stty -nl -ixon ignbrk -brkint < $REDIRECT
     if test -x /etc/init.d/kbd -a -n "$RUNLEVEL" ; then
@@ -66,17 +62,42 @@ redirect ()
 	/bin/rm -f /var/run/keymap
 	/etc/init.d/kbd start
     fi
+    splash_read
+    splash_off
 }
 
 restore ()
 {
     test -n "$did_redirect" || return 0
     test -z "$otty" || stty "$otty" < $REDIRECT;
-    [[ "$splash" =~ silent ]] && echo silent > /proc/splash
+    splash_restore
+}
+
+splash_read()
+{
+    splash=""
+    if test -e /proc/splash ; then
+	read splash  < /proc/splash
+	case "$splash" in
+	    *silent*) splash='silent' ;;
+	    *) splash='' ;;
+	esac
+    fi
+}
+
+splash_off()
+{
+    [ -z "$splash" ] || echo verbose > /proc/splash
+}
+
+splash_restore()
+{
+    [ -z "$splash" ] || echo "$splash" > /proc/splash
 }
 
 setprompt ()
 {
+    redirect
     if [ -n "$RUNLEVEL" ]; then
 	/usr/bin/setterm -msg off
     fi
@@ -293,8 +314,6 @@ start_cryptotab ()
 
 	haveone=1
 
-	redirect
-
 	makeabsolute physdev
 
 	# key length for cryptsetup
@@ -467,7 +486,6 @@ start_crypttab ()
 	fi
 
 	haveone=1
-	redirect
 
 	makeabsolute physdev
 
