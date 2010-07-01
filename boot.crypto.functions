@@ -602,7 +602,7 @@ start_crypttab ()
 	    continue
 	fi
 
-	if test "$CRYPT_EARLY" = "yes" -a "$noearly" = "yes"; then
+	if test "$CRYPT_EARLY" = "yes" -a \( "$noearly" = "yes" -o "$maketmp" = "yes" \); then
 	    report 5 "$name... will be set up later"
 	    continue
 	fi
