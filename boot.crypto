@@ -25,13 +25,14 @@
 ### BEGIN INIT INFO
 # Provides:          boot.crypto
 # Required-Start:    boot.localfs boot.device-mapper
-# Should-Start:
+# Should-Start:      boot.crypto-early
 # Required-Stop:     boot.localfs boot.device-mapper
-# Should-Stop:
+# Should-Stop:       $null
 # Default-Start:     B
-# Default-Stop:
-# Description:       Enable crypto file systems before leaving boot phase
-# Short-Description: Enable crypto file systems before leaving boot phase
+# Default-Stop:      $null
+# X-Interactive:     true
+# Description:       crypto file systems, part 2
+# Short-Description: Enables crypto file systems that couldn't be enabled in first part
 ### END INIT INFO
 
 . /etc/rc.status

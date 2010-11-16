@@ -26,13 +26,14 @@
 # Provides:          boot.crypto-early
 # Required-Start:    boot.device-mapper
 # X-Start-Before:    boot.lvm boot.md boot.localfs
-# Should-Start:
+# Should-Start:      $null
 # Required-Stop:     boot.device-mapper
-# Should-Stop:
+# Should-Stop:       $null
 # Default-Start:     B
-# Default-Stop:
-# Description:       Enable early crypto file systems
-# Short-Description: Enable early crypto file systems
+# Default-Stop:      $null
+# X-Interactive:     true
+# Description:       crypto file systems
+# Short-Description: crypto file systems
 ### END INIT INFO
 
 . /etc/rc.status
