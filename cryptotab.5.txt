@@ -16,15 +16,6 @@ SYNOPSIS
     
 DESCRIPTION
 -----------
-
-[NOTE]
-===========
-*/etc/cryptotab* was designed for use with the now
-deprecated cryptoloop technology and must therefore be considered
-deprecated as well. */etc/crypttab* (note the missing ``o'') should be
-used instead.
-===========
-
 The file */etc/cryptotab* contains descriptive informations about
 encrypted volumes. Each volume is described on a separate line;
 columns on each line are separated by tabs or spaces. Lines starting
@@ -58,6 +49,14 @@ EXAMPLES
 .........
 /dev/loop0 /dev/sda6 /secret ext2 twofish256
 .........
+
+BUGS
+----
+*/etc/cryptotab* was designed for use with the
+deprecated cryptoloop technology and is no longer supported. This manual only
+exists for reference. Use
+*/etc/crypttab* (note the missing ``o'') instead. The script *convert_cryptotab* may help with this task.
+
 
 SEE ALSO
 --------

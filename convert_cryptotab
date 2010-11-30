@@ -1,0 +1,4 @@
+#!/bin/bash
+. /lib/cryptsetup/boot.crypto.functions
+
+convert_cryptotab "$@"

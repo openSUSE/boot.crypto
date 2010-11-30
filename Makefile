@@ -3,6 +3,7 @@ pkglibdir=/lib/cryptsetup
 mandir=/usr/share/man
 sysconfdir=/etc
 initrdscriptsdir=/lib/mkinitrd/scripts
+sbindir=/usr/sbin
 
 ASCIIDOC=asciidoc
 
@@ -23,6 +24,7 @@ cryptotab.5.html: cryptotab.5.txt
 	$(ASCIIDOC) cryptotab.5.txt
 
 install: crypttab.5 cryptotab.5
+	install -d -m 755 $(DESTDIR)$(sbindir)
 	install -d -m 755 $(DESTDIR)$(initrdscriptsdir)
 	install -d -m 755 $(DESTDIR)$(initscriptdir)
 	install -d -m 755 $(DESTDIR)$(pkglibdir)/checks
@@ -39,6 +41,7 @@ install: crypttab.5 cryptotab.5
 		install -m 644 /dev/null $(DESTDIR)$(sysconfdir)/crypttab
 	install -m 755 mkinitrd/setup-luks*.sh $(DESTDIR)$(initrdscriptsdir)/
 	install -m 755 mkinitrd/boot-luks.sh $(DESTDIR)$(initrdscriptsdir)/boot-luks.sh
+	install -m 755 convert_cryptotab $(DESTDIR)$(sbindir)
 
 html: crypttab.5.html cryptotab.5.html
 

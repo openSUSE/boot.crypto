@@ -26,7 +26,6 @@ base=${0##*/}
 link=${base#*[SK][0-9][0-9]}
 
 # Redirect to real device (e.g. in case of boot logging)
-: ${CRYPTOTAB:=/etc/cryptotab}
 : ${CRYPTTAB:=/etc/crypttab}
 
 # wait indefinitely in 2nd stage install to have a complete system
@@ -288,166 +287,6 @@ resolvelink()
     eval "$var=\"$dev\""
 }
 
-start_cryptotab ()
-{
-    local stat=0
-    local haveone=''
-    timeout="$TIMEOUT"
-
-    test -n "$tostart" || echo "Activating crypto devices using $CRYPTOTAB ... "
-    while read loopdev physdev access filesys crypto mopt info rest ; do
-	case "$loopdev" in
-	    \#*|"") continue ;;
-	esac
-
-	name="${loopdev#/dev/}"
-	name="cryptotab_${name//[^A-Za-z0-9]/_}"
-
-	if test -n "$tostart" \
-	    -a "$loopdev" != "$tostart" \
-	    -a "$physdev" != "$tostart" \
-	    -a "$name" != "$tostart" \
-	    -a "/dev/mapper/$name" != "$tostart" \
-	    -a "$access" != "$tostart"; then
-		continue
-	fi
-
-	haveone=1
-
-	makeabsolute physdev
-
-	# key length for cryptsetup
-	keylen=
-	ivgen='plain'
-	hashalgo='sha512'
-	#
-
-	# Does the user want to skip current entry?
-	#
-	doskip=0
-	#
-	# Does the mount point exit?
-	#
-	if ! test -d $access ; then
-	    report 5 "$physdev: $access doesn't exist"
-	    failed=1
-	    continue
-	fi
-	if ! test -e $physdev ; then
-	    report 5 "$physdev doesn't exist"
-	    failed=1
-	    continue
-	fi
-	#
-	# Seeking for crypto modules
-	#
-	case "$crypto" in
-	    twofish)       keylen=192; ivgen='null'; hashalgo='ripemd160:20' ;;
-	    twofishSL92)   keylen=256; ivgen='null' ;;
-	    twofish[0-9]*) keylen=${crypto#twofish}; ;;
-	    #TODO add more algorithm or better detection
-	    *)
-		    report 2 "$physdev: unsupported algorithm \"$crypto\""
-		    failed=1
-		    continue
-		    ;;
-	esac
-	cipher=twofish-cbc-$ivgen
-
-	if [ -e "/dev/mapper/$name" ]; then
-	    report 5 "$physdev: $name already mapped"
-	    continue
-	fi
-
-	while true; do # setup/check loop
-	    #
-	    # Restore virgin state
-	    #
-	    if [ -b "/dev/mapper/$name" ]; then
-		/sbin/cryptsetup remove $name || true
-	    fi
-	    detachloopdev
-	    device="$loopdev"
-
-	    #
-	    # Setting up loop device
-	    #
-	    if test -n "$info" ; then
-		local prmt="${extd}Unlocking \"$info\" ($physdev)${norm}"
-	    else
-		local prmt="${extd}Unlocking $physdev${norm}"
-	    fi
-
-	    # we always use a loop device to avoid block size issues
-	    # with e.g. cdroms for backward compatability
-	    if ! losetup $loopdev $physdev; then
-		    report 1 "$physdev..."
-		    failed=1
-		    continue 2
-	    fi
-	    
-	    local params="-t $timeout -c $cipher -s $keylen -h $hashalgo"
-
-	    setprompt "$prmt"
-	    /sbin/cryptsetup $params create "$name" "$device" < $REDIRECT > $REDIRECT 2>&1
-	    stat=$?
-	    unsetprompt
-
-	    if test "$stat" -ne 0; then
-		    detachloopdev
-		    report 1 "$physdev..."
-		    failed=1
-		    continue 2
-	    fi
-
-	    device="/dev/mapper/$name"
-
-	    paranoid_safety_checks "$filesys" "$device" "$access" "$physdev"
-	    stat="$?"
-	    if test "$stat" = 1; then # retype passphrase
-		continue
-	    elif test "$stat" = 2; then # skip entry
-		doskip=1
-	    fi
-	    break
-	done
-	#
-	# Does the user want to skip this entry?
-	#
-	if test $doskip -gt 0 ; then
-	    /sbin/cryptsetup remove $name || true
-	    report 5 "$physdev..."
-	    detachloopdev
-	    continue
-	fi
-
-	if ! run_fsck "$filesys" "$device" "$access" "$physdev"; then
-	    report 1 "$physdev..."
-	    continue
-	fi
-
-	case "$mopt" in
-	    default|"") mopt=""	;;
-	esac
-
-	mount -t $filesys ${mopt:+-o $mopt} $device $access
-	stat=$?
-	if test $stat -gt 0 ; then
-	    stat=1
-	    /sbin/cryptsetup remove $name || true
-	    detachloopdev
-	fi
-	report $stat "$physdev..."
-    done < $CRYPTOTAB
-
-    if test -z "$haveone" -a -z "$tostart"; then
-	rc_failed 6
-	rc_status -v1
-    fi
-
-    test -z "$haveone" || foundit="$haveone"
-}
-
 # options are alreay parsed so we ignore the option parmeter ($2)
 keyscript_hashalot()
 {
@@ -457,6 +296,78 @@ keyscript_hashalot()
     else
 	/sbin/hashalot $args
     fi
+}
+
+convert_cryptotab ()
+{
+    : ${CRYPTOTAB:=/etc/cryptotab}
+    local _crypttab=()
+    local _fstab=()
+
+    if [ ! -s $CRYPTOTAB ]; then
+	echo "You don't have $CRYPTOTAB! Nothing to do :-)"
+	return 0
+    fi
+
+    local cnt=0
+    local line
+
+    while read loopdev physdev access filesys crypto mopt info rest ; do
+	case "$loopdev" in
+	    \#*|"") continue ;;
+	esac
+
+	name="cryptotab$cnt"
+	
+	makeabsolute physdev
+
+	# key length for cryptsetup
+	keylen=
+	ivgen='plain'
+	hashalgo='sha512'
+	#
+
+	#
+	# Seeking for crypto modules
+	#
+	case "$crypto" in
+	    twofish)       keylen=192; ivgen='null'; hashalgo='ripemd160:20' ;;
+	    twofishSL92)   keylen=256; ivgen='null' ;;
+	    twofish[0-9]*) keylen=${crypto#twofish}; ;;
+	    #TODO add more algorithm or better detection
+	    *)
+		    echo "$physdev: unsupported algorithm \"$crypto\""
+		    continue
+		    ;;
+	esac
+	cipher=twofish-cbc-$ivgen
+
+	case "$mopt" in
+	    default|"") mopt="nofail" ;;
+	    *nofail*) ;;
+	    *) mopt="$mopt,nofail";;
+	esac
+
+	_crypttab+=("$name $physdev none cipher=$cipher,hash=$hashalgo,size=$keylen,timeout=$TIMEOUT")
+	_fstab+=("/dev/mapper/$name $access $filesys $mopt 0 2")
+	: $((++cnt))
+    done < $CRYPTOTAB
+
+    if [ -z "$_crypttab" ]; then
+	echo "nothing to do"
+	return 0;
+    fi
+
+    echo "### put the following lines in /etc/crypttab:"
+    for line in "${_crypttab[@]}"; do
+	echo "$line"
+    done
+
+    echo
+    echo "### put the following lines in /etc/fstab:"
+    for line in "${_fstab[@]}"; do
+	echo "$line"
+    done
 }
 
 start_crypttab ()
@@ -919,60 +830,6 @@ umount_or_swapoff()
 }
 
 
-stop_cryptotab ()
-{
-    local haveone=''
-
-    test -n "$tostop" || echo "Turning off crypto devices using $CRYPTOTAB ... "
-
-    while read loopdev physdev access filesys crypto mopt rest ; do
-	case "$loopdev" in
-	    \#*|"") continue ;;
-	esac
-
-	name="${loopdev#/dev/}"
-	name="cryptotab_${name//[^A-Za-z0-9]/_}"
-
-	if test -n "$tostop" \
-	    -a "$loopdev" != "$tostop" \
-	    -a "$physdev" != "$tostop" \
-	    -a "$name" != "$tostop" \
-	    -a "/dev/mapper/$name" != "$tostop" \
-	    -a "$access" != "$tostop"; then
-		continue
-	fi
-
-	haveone=1
-
-	makeabsolute physdev
-
-	if test -b "/dev/mapper/$name"; then
-
-	    if ! umount_or_swapoff; then
-		report 1 "$physdev..."
-		failed=1
-		continue
-	    fi
-
-	    cryptsetup remove "$name" || rc_failed 1
-	fi
-
-	if losetup $loopdev >/dev/null 2>&1; then
-	    losetup -d $loopdev || { rc_failed 1; failed=1; }
-	fi
-
-	echo -n "$physdev..."
-	rc_status -v
-
-    done < <(reverse < $CRYPTOTAB)
-    
-    if test -z "$haveone" -a -z "$tostop"; then
-	rc_status -v1
-    fi
-
-    test -z "$haveone" || foundit="$haveone"
-}
-
 stop_crypttab ()
 {
     local haveone=''
@@ -1036,68 +893,6 @@ stop_crypttab ()
 
     if test -z "$haveone" -a -z "$tostop"; then
 	rc_status -v1
-    fi
-
-    test -z "$haveone" || foundit="$haveone"
-}
-
-status_cryptotab()
-{
-    local state str
-    local haveone=''
-    while read loopdev physdev access filesys crypto mopt info rest ; do
-	case "$loopdev" in
-	    \#*|"") continue ;;
-	esac
-
-	if test -n "$tostatus" \
-	    -a "$loopdev" != "$tostatus" \
-	    -a "$physdev" != "$tostatus" \
-	    -a "$access" != "$tostatus"; then
-		continue
-	fi
-
-	haveone=1
-
-	makeabsolute physdev
-
-	name="${loopdev#/dev/}"
-	name="cryptotab_${name//[^A-Za-z0-9]/_}"
-
-	echo -n "$physdev"
-	state=0
-	str=''
-
-	if losetup "$loopdev" > /dev/null 2>&1; then
-	    str="$str ${loopdev#/dev/}"
-	    state=$((state+1))
-	fi
-	if test -b "/dev/mapper/$name"; then
-	    str="$str mapped"
-	    state=$((state+1))
-	fi
-	if /bin/grep -q "^/dev/mapper/$name[ \t]" /proc/mounts; then
-	    str="$str mounted"
-	    state=$((state+1))
-	fi
-
-	if test "$state" = 3; then
-	    rc_failed 0
-	elif test "$state" != 0; then 
-	    rc_failed 4
-	else
-	    rc_failed 3
-	fi
-
-	if test -n "$str"; then
-	    echo -n " [$str ]"
-	fi
-	rc_status -v
-
-    done < $CRYPTOTAB
-
-    if test -z "$haveone" -a -z "$tostatus"; then
-	report 3 "$CRYPTOTAB"
     fi
 
     test -z "$haveone" || foundit="$haveone"

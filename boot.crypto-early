@@ -97,10 +97,6 @@ case "$1" in
 	tostatus="$2"
 	foundit=''
 
-	if test -s $CRYPTOTAB; then
-	    status_cryptotab
-	fi
-
 	if test -s $CRYPTTAB; then
 	    status_crypttab
 	fi
