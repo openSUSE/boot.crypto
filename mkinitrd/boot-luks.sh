@@ -65,9 +65,9 @@ luksopen()
 
 check_retry()
 {
-	# return value != 255 means some error with getting the key,
+	# return value != 2 means some error with getting the key,
 	# like timeout or ^d. No retry in that case.
-	[ "$1" -ne 0 -a "$1" -eq 255 ]
+	[ "$1" -ne 0 -a "$1" -eq 2 ]
 }
 
 do_luks() {
@@ -76,8 +76,8 @@ do_luks() {
 		# We only support english keyboard layout
 		;;
 		*)
-		echo "Only english keyboard layout supported."
-		echo "Please ensure that the password is typed correctly."
+		echo "*** Note: only US keyboard layout is supported."
+		echo "*** Please ensure that the password is typed correctly."
 		;;
 	esac
 
