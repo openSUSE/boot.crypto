@@ -592,9 +592,12 @@ start_crypttab ()
 		    continue
 		fi
 
-		unset loopsize
-		read loopsize < /sys/block/${dev#/dev/}/size
-		if test $? -eq 0 -a "$loopsize" = '0' && /sbin/losetup $param_ro "$dev" $device; then
+		loopsize=0
+		p=/sys/block/${dev#/dev/}/size
+		if [ -e "$p" ]; then # doesn't exist if loop module not loaded
+			read loopsize < "$p"
+		fi
+		if test "$loopsize" = '0' && /sbin/losetup $param_ro "$dev" $device; then
 		    device="$dev"
 		    loopdev="$device"
 		    break
