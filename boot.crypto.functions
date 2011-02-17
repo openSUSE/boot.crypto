@@ -666,9 +666,9 @@ start_crypttab ()
 	    fi
 
 	    if test $stat -ne 0; then
-		# return value != 255 means some error with getting the key,
+		# return value != 2 means some error with getting the key,
 		# like timeout or ^d. No retry in that case.
-		if test "$stat" -ne 255 -o \( "$tries" -ne 0 -a "$tried" -ge "$tries" \); then
+		if test "$stat" -ne 2 -o \( "$tries" -ne 0 -a "$tried" -ge "$tries" \); then
 		    report 1 "$name... "
 		    doskip=1
 		    failed=1
