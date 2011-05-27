@@ -24,10 +24,10 @@
 #
 ### BEGIN INIT INFO
 # Provides:          boot.crypto-early
-# Required-Start:    boot.device-mapper
+# Required-Start:    boot.udev
 # X-Start-Before:    boot.lvm boot.md boot.localfs
 # Should-Start:      $null
-# Required-Stop:     boot.device-mapper
+# Required-Stop:     $null
 # Should-Stop:       $null
 # Default-Start:     B
 # Default-Stop:      $null

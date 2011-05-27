@@ -24,9 +24,9 @@
 #
 ### BEGIN INIT INFO
 # Provides:          boot.crypto
-# Required-Start:    boot.localfs boot.device-mapper
+# Required-Start:    boot.localfs
 # Should-Start:      boot.crypto-early
-# Required-Stop:     boot.localfs boot.device-mapper
+# Required-Stop:     boot.localfs
 # Should-Stop:       $null
 # Default-Start:     B
 # Default-Stop:      $null
