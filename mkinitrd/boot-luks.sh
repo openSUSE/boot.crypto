@@ -78,3 +78,12 @@ if [ -n "$vg_resume" ]; then
 	done
 	wait_for_events
 fi
+ 
+# Encrypted volume groups mounted by label or uuid will not
+# get recognized otherwise (bnc#722916)
+case "$root" in
+/dev/disk/by-label/*|/dev/disk/by-uuid/*)
+	vgscan
+	vgchange -a y
+	;;
+esac
