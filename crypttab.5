@@ -1,13 +1,22 @@
 '\" t
 .\"     Title: crypttab
 .\"    Author: [see the "AUTHOR" section]
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 02/02/2010
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 11/24/2011
 .\"    Manual: Cryptsetup Manual
 .\"    Source: cryptsetup
 .\"  Language: English
 .\"
-.TH "CRYPTTAB" "5" "02/02/2010" "cryptsetup" "Cryptsetup Manual"
+.TH "CRYPTTAB" "5" "11/24/2011" "cryptsetup" "Cryptsetup Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
@@ -122,25 +131,25 @@ Options have to be specified in the format:
 \fBcipher\fR=<cipher>
 .RS 4
 Encryption algorithm\&. See
-\fBcryptsetup \-c\fR\&.
+\fBcryptsetup \-c\fR\&. Ignored for LUKS volumes\&.
 .RE
 .PP
 \fBsize\fR=<size>
 .RS 4
 Encryption key size\&. See
-\fBcryptsetup \-s\fR\&.
+\fBcryptsetup \-s\fR\&. Ignored for LUKS volumes\&.
 .RE
 .PP
 \fBhash\fR=<hash>
 .RS 4
 Hash algorithm\&. See
-\fBcryptsetup \-h\fR\&.
+\fBcryptsetup \-h\fR\&. Ignored for LUKS volumes\&.
 .RE
 .PP
 \fBverify\fR
 .RS 4
 Verify password\&. See
-\fBcryptsetup \-y\fR\&.
+\fBcryptsetup \-y\fR\&. Ignored for LUKS volumes\&.
 .RE
 .PP
 \fBreadonly\fR
@@ -223,12 +232,12 @@ tells mkinitrd to activate this device in the initrd already\&. Only LUKS and no
 .PP
 \fBpseed=<string>\fR
 .RS 4
-Set a string that is appended to the passphrase after hashing\&. Using different seeds for volumes with the same passphrase makes dictionary attacks harder\&. Use for compatability with loop\-AES\&.
+Set a string that is appended to the passphrase after hashing\&. Using different seeds for volumes with the same passphrase makes dictionary attacks harder\&. Use for compatability with loop\-AES\&. Ignored for LUKS volumes\&.
 .RE
 .PP
 \fBitercountk=<num>\fR
 .RS 4
-Encrypts the hashed password <num> thousand times using AES\-256\&. Use for compatability with loop\-AES\&.
+Encrypts the hashed password <num> thousand times using AES\-256\&. Use for compatability with loop\-AES\&. Ignored for LUKS volumes\&.
 .RE
 .PP
 \fBkeyscript=<path>\fR

@@ -62,15 +62,19 @@ OPTIONS
 
 *cipher*=<cipher>::
 Encryption algorithm. See *cryptsetup -c*.
+Ignored for LUKS volumes.
 
 *size*=<size>::
 Encryption key size. See *cryptsetup -s*.
+Ignored for LUKS volumes.
 
 *hash*=<hash>::
 Hash algorithm. See *cryptsetup -h*.
+Ignored for LUKS volumes.
 
 *verify*::
 Verify password. See *cryptsetup -y*.
+Ignored for LUKS volumes.
 
 *readonly*::
 The backing device is read-only (eg: a dvd).
@@ -139,10 +143,12 @@ explicitly.
 Set a string that is appended to the passphrase after hashing.
 Using different seeds for volumes with the same passphrase makes
 dictionary attacks harder. Use for compatability with loop-AES.
+Ignored for LUKS volumes.
 
 *itercountk=<num>*::
 Encrypts the hashed password <num> thousand times using AES-256. Use
 for compatability with loop-AES.
+Ignored for LUKS volumes.
 
 *keyscript=<path>*::
 Calls <path> and uses the output passphrase or key. If <path> is not
