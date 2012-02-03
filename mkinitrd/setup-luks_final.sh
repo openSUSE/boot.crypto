@@ -27,7 +27,7 @@ if use_script luks; then
 		luks_lang="$LANG"
 		;;
 	esac
-	cryptmodules=`sed -ne '/^module/s/.*: //p' < /proc/crypto`
+	cryptmodules=`sed -ne '/ kernel$/d;/^module/s/.*: //p' < /proc/crypto`
     fi
     
     check_cryptomgr_needed
