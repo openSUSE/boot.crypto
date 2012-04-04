@@ -13,7 +13,7 @@
 ##
 ## luks			a list of luks devices (e.g. xxx)
 ## luks_xxx		the luks device (e.g. /dev/sda)
-## 
+##
 
 if test -t 1 -a "$TERM" != "raw" -a "$TERM" != "dumb"; then
 	extd="\e[1m"
@@ -22,6 +22,13 @@ else
 	extd=''
 	norm=''
 fi
+
+luks_check_ply()
+{
+	if [ -x /usr/bin/plymouth ] && /usr/bin/plymouth --ping; then
+		return 0
+	fi
+}
 
 splash_read()
 {
@@ -37,12 +44,16 @@ splash_read()
 
 splash_off()
 {
-	[ -z "$splash" ] || echo verbose > /proc/splash
+	if ! luks_check_ply && [ -n "$splash" ]; then
+		echo verbose > /proc/splash
+	fi
 }
 
 splash_restore()
 {
-	[ -z "$splash" ] || echo "$splash" > /proc/splash
+	if ! luks_check_ply && [ -n "$splash" ]; then
+		echo "$splash" > /proc/splash
+	fi
 }
 
 # can't do this in luksopen as it would mix output with the
@@ -58,9 +69,13 @@ luksopen()
 {
 	local name="$1"
 	eval local dev="\"\${luks_${luks}}\""
-	echo -e "${extd}Unlocking ${name} ($dev)${norm}"
-	splash_off
-	/sbin/cryptsetup --tries=1 luksOpen "$dev" "$name"
+	if luks_check_ply; then
+		/usr/bin/plymouth ask-for-password --prompt="Unlocking ${name} ($dev)" | /sbin/cryptsetup --tries=1 luksOpen "$dev" "$name"
+	else
+		echo -e "${extd}Unlocking ${name} ($dev)${norm}"
+		splash_off
+		/sbin/cryptsetup --tries=1 luksOpen "$dev" "$name"
+	fi
 }
 
 check_retry()
@@ -76,8 +91,12 @@ do_luks() {
 		# We only support english keyboard layout
 		;;
 		*)
-		echo "*** Note: only US keyboard layout is supported."
-		echo "*** Please ensure that the password is typed correctly."
+		if luks_check_ply; then
+			plymouth display-message --text "Enter your passphrase, only US keyboard layout is supported"
+		else
+			echo "*** Note: only US keyboard layout is supported."
+			echo "*** Please ensure that the password is typed correctly."
+		fi
 		;;
 	esac
 
@@ -87,6 +106,7 @@ do_luks() {
 	fi
 
 	for luks in "$@"; do
+		local pass
 		eval local keyfile="\"\${luks_${luks}_keyfile}\""
 		eval local keyscript="\"\${luks_${luks}_keyscript}\""
 		luks_wait_device "$luks"
@@ -96,24 +116,26 @@ do_luks() {
 				# devices are to be decrypted
 				if [ -n "$reuse_pass" ]; then
 					if [ -z "$pass" ]; then
-						splash_off
-						local pass
-						echo
-						echo -e "${extd}Need to unlock encrypted volumes${norm}"
-						echo -n "Enter LUKS Passphrase: "
-						read -s pass
-						echo
+						if luks_check_ply; then
+							pass=`/usr/bin/plymouth ask-for-password --prompt="Enter LUKS Passphrase"`
+						else splash_off
+							echo
+							echo -e "${extd}Need to unlock encrypted volumes${norm}"
+							echo -n "Enter LUKS Passphrase: "
+							read -s pass
+							echo
+						fi
 					fi
 
-					echo "$pass" | luksopen "$luks" || {
-						pass='xxxxxxxxxxxxxxxxxxxx'; unset pass; luksopen "$luks"; }
+					echo "$pass" | luksopen "$luks" "$ask_pass" || {
+						pass='xxxxxxxxxxxxxxxxxxxx'; unset pass; luksopen "$luks" "$ask_pass"; }
 					check_retry $? || break;
 				else
-					luksopen "$luks"
+					luksopen "$luks" "$ask_pass"
 					check_retry $? || break;
 				fi
 			else
-				$keyscript "$keyfile" | luksopen "$luks"
+				$keyscript "$keyfile" | luksopen "$luks" "$ask_pass"
 				check_retry $? || break;
 			fi
 		done
@@ -128,6 +150,11 @@ do_luks() {
 splash_read
 
 do_luks
+
+# Clear the screen of all text
+if luks_check_ply; then
+	plymouth display-message --text ""
+fi
 
 # XXX: activate and wait for volume groups if the resume volume is
 # on lvm. This is a layering violation but with current mkinitrd
