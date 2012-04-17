@@ -45,21 +45,24 @@ find_crypttab_initrd()
 	if [ -n "$extraopts" ]; then
 	    echo "/etc/crypttab: $name has extra options, not supported by the initrd" >&2
 	    continue;
-	elif [ -n "$keyscript" ]; then
-	    if [ "${keyscript:0:1}" != '/' ]; then
-		keyscript="/lib/cryptsetup/scripts/$keyscript"
-	    fi
-	    if [ ! -x "$keyscript" ]; then
-		echo "keyscript \"$keyscript\" must be an executable" >&2
-		continue
-	    fi
-	    eval "luks_${name}_device=\"\$physdev\""
-	    eval "luks_${name}_keyscript=\"\$keyscript\""
-	    [ -z "$keyfile" ] || eval "luks_${name}_keyfile=\"\$keyfile\""
-	    eval "luks_${name}_options=\"\$options\""
-	elif [ -n "$keyfile" ]; then
+	elif [ -z "$keyscript" -a -n "$keyfile" ]; then
 	    echo "/etc/crypttab: $name: keyfile not supported by the initrd" >&2
 	    continue
+	else
+	    dbg "got $name ($physdev) from crypttab"
+	    eval "luks_${name}_device=\"\$physdev\""
+	    if [ -n "$keyscript" ]; then
+		if [ "${keyscript:0:1}" != '/' ]; then
+		    keyscript="/lib/cryptsetup/scripts/$keyscript"
+		fi
+		if [ ! -x "$keyscript" ]; then
+		    echo "keyscript \"$keyscript\" must be an executable" >&2
+		    continue
+		fi
+		eval "luks_${name}_keyscript=\"\$keyscript\""
+		[ -z "$keyfile" ] || eval "luks_${name}_keyfile=\"\$keyfile\""
+		eval "luks_${name}_options=\"\$options\""
+	    fi
 	fi
 	luks_add_device+=("/dev/mapper/$name")
     done < /etc/crypttab
@@ -76,6 +79,7 @@ find_luks_devices()
     # bd holds the device we see the decrypted LUKS partition as
     for bd in "${luks_add_device[@]}" $blockdev; do
     	luks_name=
+	luks_physdev=
 	update_blockdev $bd
 	if [ "$blockdriver" != "device-mapper" ]; then
 	    luks_blockdev="$luks_blockdev $bd"
@@ -102,7 +106,14 @@ find_luks_devices()
 		dbg "$luks_name already handled"
 		continue
 	    fi
-	    eval luks_${luks_name}=$(beautify_blockdev ${luksbd}) || continue
+	    dbg "found name $luks_name"
+	    if isset "luks_${luks_name}_device"; then
+		    eval luks_physdev=\$luks_${luks_name}_device
+	    fi
+	    if [ -z "$luks_physdev" ]; then
+		eval luks_physdev=$(beautify_blockdev ${luksbd}) || continue
+	    fi
+	    eval luks_${luks_name}=\"\$luks_physdev\"
 	    save_var luks_${luks_name}
 	    save_var luks_${luks_name}_device
 	    ! isset luks_${luks_name}_options || save_var luks_${luks_name}_options
@@ -116,7 +127,7 @@ find_luks_devices()
 	    fi
 
 	    luks="$luks $luks_name"
-	    echo "enabling LUKS support for $luksbd ($luks_name)"
+	    echo "enabling LUKS support for ${luks_physdev} ($luks_name)"
 	    luks_blockdev="$luks_blockdev $luksbd"
 	done
 	if [ ! "$luks_name" ]; then # no luks found
