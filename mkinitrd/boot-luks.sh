@@ -28,6 +28,7 @@ luks_check_ply()
 	if [ -x /usr/bin/plymouth ] && /usr/bin/plymouth --ping; then
 		return 0
 	fi
+	return 1
 }
 
 splash_read()
