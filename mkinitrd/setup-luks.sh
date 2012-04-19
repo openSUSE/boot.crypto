@@ -50,7 +50,8 @@ find_crypttab_initrd()
 	    continue
 	else
 	    dbg "got $name ($physdev) from crypttab"
-	    eval "luks_${name}_device=\"\$physdev\""
+	    varname=${name//[^a-zA-Z0-9_]/_}
+	    eval "luks_${varname}_device=\"\$physdev\""
 	    if [ -n "$keyscript" ]; then
 		if [ "${keyscript:0:1}" != '/' ]; then
 		    keyscript="/lib/cryptsetup/scripts/$keyscript"
@@ -59,9 +60,9 @@ find_crypttab_initrd()
 		    echo "keyscript \"$keyscript\" must be an executable" >&2
 		    continue
 		fi
-		eval "luks_${name}_keyscript=\"\$keyscript\""
-		[ -z "$keyfile" ] || eval "luks_${name}_keyfile=\"\$keyfile\""
-		eval "luks_${name}_options=\"\$options\""
+		eval "luks_${varname}_keyscript=\"\$keyscript\""
+		[ -z "$keyfile" ] || eval "luks_${varname}_keyfile=\"\$keyfile\""
+		eval "luks_${varname}_options=\"\$options\""
 	    fi
 	fi
 	luks_add_device+=("/dev/mapper/$name")
@@ -80,6 +81,7 @@ find_luks_devices()
     for bd in "${luks_add_device[@]}" $blockdev; do
     	luks_name=
 	luks_physdev=
+	varname=
 	update_blockdev $bd
 	if [ "$blockdriver" != "device-mapper" ]; then
 	    luks_blockdev="$luks_blockdev $bd"
@@ -102,31 +104,34 @@ find_luks_devices()
 	    tmp_root_dm=1 # luks needs dm
 
 	    luks_name="$(dmsetup -c info -o name --noheadings -j $luks_blockmajor -m $luks_blockminor)"
-	    if isset "luks_${luks_name}"; then
+	    varname=${luks_name//[^a-zA-Z0-9_]/_}
+	    if isset "luks_${varname}"; then
 		dbg "$luks_name already handled"
 		continue
 	    fi
 	    dbg "found name $luks_name"
-	    if isset "luks_${luks_name}_device"; then
-		    eval luks_physdev=\$luks_${luks_name}_device
+	    if isset "luks_${varname}_device"; then
+		    eval luks_physdev=\$luks_${varname}_device
 	    fi
 	    if [ -z "$luks_physdev" ]; then
 		eval luks_physdev=$(beautify_blockdev ${luksbd}) || continue
 	    fi
-	    eval luks_${luks_name}=\"\$luks_physdev\"
-	    save_var luks_${luks_name}
-	    save_var luks_${luks_name}_device
-	    ! isset luks_${luks_name}_options || save_var luks_${luks_name}_options
-	    ! isset luks_${luks_name}_keyfile || save_var luks_${luks_name}_keyfile
-	    if isset luks_${luks_name}_keyscript; then
-		save_var luks_${luks_name}_keyscript
-		eval "keyscript=\"\$luks_${luks_name}_keyscript\""
+	    eval luks_${varname}=\"\$luks_physdev\"
+	    eval luks_${varname}_name=\"\$luks_name\"
+	    save_var luks_${varname}
+	    save_var luks_${varname}_device
+	    save_var luks_${varname}_name
+	    ! isset luks_${varname}_options || save_var luks_${varname}_options
+	    ! isset luks_${varname}_keyfile || save_var luks_${varname}_keyfile
+	    if isset luks_${varname}_keyscript; then
+		save_var luks_${varname}_keyscript
+		eval "keyscript=\"\$luks_${varname}_keyscript\""
 		cryptprograms="$cryptprograms $keyscript"
 		# hack as setup-progs.sh does not create directories (bnc#536470)
 		mkdir -p $tmp_mnt${keyscript%/*}
 	    fi
 
-	    luks="$luks $luks_name"
+	    luks="$luks $varname"
 	    echo "enabling LUKS support for ${luks_physdev} ($luks_name)"
 	    luks_blockdev="$luks_blockdev $luksbd"
 	done

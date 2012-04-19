@@ -62,20 +62,21 @@ splash_restore()
 luks_wait_device()
 {
 	local name="$1"
-	eval local dev="\"\${luks_${luks}}\""
+	eval local dev="\"\${luks_${name}}\""
 	check_for_device "$dev"
 }
 
 luksopen()
 {
 	local name="$1"
-	eval local dev="\"\${luks_${luks}}\""
+	eval local dev="\"\${luks_${name}}\""
+	eval local realname="\"\${luks_${name}_name}\""
 	if luks_check_ply; then
-		/usr/bin/plymouth ask-for-password --prompt="Unlocking ${name} ($dev)" | /sbin/cryptsetup --tries=1 luksOpen "$dev" "$name"
+		/usr/bin/plymouth ask-for-password --prompt="Unlocking ${realname} ($dev)" | /sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
 	else
-		echo -e "${extd}Unlocking ${name} ($dev)${norm}"
+		echo -e "${extd}Unlocking ${realname} ($dev)${norm}"
 		splash_off
-		/sbin/cryptsetup --tries=1 luksOpen "$dev" "$name"
+		/sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
 	fi
 }
 
