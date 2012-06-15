@@ -60,6 +60,10 @@ Options have to be specified in the format: 'key'='value'[,'key'='value' ...]
 OPTIONS
 -------
 
+Note: the options listed here refer to boot.crypto as used by
+sysvinit. Systemd has a separate implementation that does not
+support all options.
+
 *cipher*=<cipher>::
 Encryption algorithm. See *cryptsetup -c*.
 Ignored for LUKS volumes.
@@ -219,7 +223,7 @@ cr_sda3 /dev/sda3 none cipher=twofish-cbc-plain,size=256,hash=sha512
 
 SEE ALSO
 --------
-cryptsetup(8), /etc/crypttab, fstab(8)
+cryptsetup(8), /etc/crypttab, fstab(8), http://en.opensuse.org/Encrypted_Filesystems
 
 
 AUTHOR
