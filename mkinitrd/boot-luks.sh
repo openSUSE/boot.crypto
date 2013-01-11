@@ -89,7 +89,7 @@ check_retry()
 
 do_luks() {
 	case $luks_lang in
-		en_*|POSIX)
+		en_US*|POSIX)
 		# We only support english keyboard layout
 		;;
 		*)

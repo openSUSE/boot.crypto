@@ -18,7 +18,7 @@ check_cryptomgr_needed()
 if use_script luks; then
     if [ -n "$root_luks" ]; then
 	case "$LANG" in
-	    en_*|POSIX)
+	    en_US*|POSIX)
 		# We only support english keyboard layout currently
 		;;
 	    *)
