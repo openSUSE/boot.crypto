@@ -95,7 +95,7 @@ find_luks_devices()
 	for luksbd in $deps; do # should be only one for luks
 	    update_blockdev $luksbd
 	    dbg -n "isLuks $luksbd ... "
-	    if ! /sbin/cryptsetup isLuks $luksbd 2>/dev/null; then
+	    if ! /usr/sbin/cryptsetup isLuks $luksbd 2>/dev/null; then
 		dbg "no"
 		continue
 	    fi

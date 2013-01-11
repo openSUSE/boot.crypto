@@ -1,6 +1,6 @@
 #!/bin/bash
 #%stage: crypto
-#%programs: /sbin/cryptsetup $cryptprograms
+#%programs: /usr/sbin/cryptsetup $cryptprograms
 #%udevmodules: dm-crypt $cryptmodules
 #%if: "$root_luks" -o "$luks"
 #
@@ -72,11 +72,11 @@ luksopen()
 	eval local dev="\"\${luks_${name}}\""
 	eval local realname="\"\${luks_${name}_name}\""
 	if luks_check_ply; then
-		/usr/bin/plymouth ask-for-password --prompt="Unlocking ${realname} ($dev)" | /sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
+		/usr/bin/plymouth ask-for-password --prompt="Unlocking ${realname} ($dev)" | /usr/sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
 	else
 		echo -e "${extd}Unlocking ${realname} ($dev)${norm}"
 		splash_off
-		/sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
+		/usr/sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
 	fi
 }
 
