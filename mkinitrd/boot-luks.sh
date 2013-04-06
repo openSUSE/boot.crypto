@@ -66,12 +66,17 @@ luks_wait_device()
 	check_for_device "$dev"
 }
 
+# $1 - crypto container name
+# $2 - do we need to ask password (yes|no)
 luksopen()
 {
 	local name="$1"
+	local ask_pass="$2"
 	eval local dev="\"\${luks_${name}}\""
 	eval local realname="\"\${luks_${name}_name}\""
-	if luks_check_ply; then
+	if [ "$ask_pass" = no ]; then
+		/sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
+	elif luks_check_ply; then
 		/usr/bin/plymouth ask-for-password --prompt="Unlocking ${realname} ($dev)" | /sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
 	else
 		echo -e "${extd}Unlocking ${realname} ($dev)${norm}"
@@ -129,15 +134,15 @@ do_luks() {
 						fi
 					fi
 
-					echo "$pass" | luksopen "$luks" "$ask_pass" || {
-						pass='xxxxxxxxxxxxxxxxxxxx'; unset pass; luksopen "$luks" "$ask_pass"; }
+					echo "$pass" | luksopen "$luks" no || {
+						pass='xxxxxxxxxxxxxxxxxxxx'; unset pass; luksopen "$luks" yes; }
 					check_retry $? || break;
 				else
-					luksopen "$luks" "$ask_pass"
+					luksopen "$luks" yes
 					check_retry $? || break;
 				fi
 			else
-				$keyscript "$keyfile" | luksopen "$luks" "$ask_pass"
+				$keyscript "$keyfile" | luksopen "$luks" no
 				check_retry $? || break;
 			fi
 		done
