@@ -45,4 +45,7 @@ install: crypttab.5 cryptotab.5
 
 html: crypttab.5.html cryptotab.5.html
 
-.PHONY: install html
+package:
+	obs/mkpackage
+
+.PHONY: install html package
