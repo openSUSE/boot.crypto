@@ -76,13 +76,17 @@ luksopen()
 	eval local realname="\"\${luks_${name}_name}\""
 	if [ "$ask_pass" = no ]; then
 		/usr/sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
+		ret="$?"
 	elif luks_check_ply; then
 		/usr/bin/plymouth ask-for-password --prompt="Unlocking ${realname} ($dev)" | /usr/sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
+		ret="$?"
 	else
 		echo -e "${extd}Unlocking ${realname} ($dev)${norm}"
 		splash_off
 		/usr/sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
+		ret="$?"
 	fi
+	return "$ret"
 }
 
 check_retry()
