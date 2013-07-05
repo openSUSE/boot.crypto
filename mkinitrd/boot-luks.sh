@@ -1,6 +1,6 @@
 #!/bin/bash
 #%stage: crypto
-#%programs: /usr/sbin/cryptsetup $cryptprograms
+#%programs: /usr/sbin/cryptsetup $cryptprograms /sbin/vgscan /sbin/vgchange
 #%udevmodules: dm-crypt $cryptmodules
 #%if: "$root_luks" -o "$luks"
 #
