@@ -1,6 +1,6 @@
 #!/bin/bash
 #%stage: crypto
-#%programs: /usr/sbin/cryptsetup $cryptprograms /sbin/vgscan /sbin/vgchange
+#%programs: cryptsetup $cryptprograms vgscan vgchange
 #%udevmodules: dm-crypt $cryptmodules
 #%if: "$root_luks" -o "$luks"
 #
@@ -25,7 +25,7 @@ fi
 
 luks_check_ply()
 {
-	if [ -x /usr/bin/plymouth ] && /usr/bin/plymouth --ping; then
+	if [ -x "$(type -p plymouth)" ] && plymouth --ping; then
 		return 0
 	fi
 	return 1
@@ -75,15 +75,15 @@ luksopen()
 	eval local dev="\"\${luks_${name}}\""
 	eval local realname="\"\${luks_${name}_name}\""
 	if [ "$ask_pass" = no ]; then
-		/usr/sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
+		cryptsetup --tries=1 luksOpen "$dev" "$realname"
 		ret="$?"
 	elif luks_check_ply; then
-		/usr/bin/plymouth ask-for-password --prompt="Unlocking ${realname} ($dev)" | /usr/sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
+		plymouth ask-for-password --prompt="Unlocking ${realname} ($dev)" | cryptsetup --tries=1 luksOpen "$dev" "$realname"
 		ret="$?"
 	else
 		echo -e "${extd}Unlocking ${realname} ($dev)${norm}"
 		splash_off
-		/usr/sbin/cryptsetup --tries=1 luksOpen "$dev" "$realname"
+		cryptsetup --tries=1 luksOpen "$dev" "$realname"
 		ret="$?"
 	fi
 	return "$ret"
@@ -128,7 +128,7 @@ do_luks() {
 				if [ -n "$reuse_pass" ]; then
 					if [ -z "$pass" ]; then
 						if luks_check_ply; then
-							pass=`/usr/bin/plymouth ask-for-password --prompt="Enter LUKS Passphrase"`
+							pass=`plymouth ask-for-password --prompt="Enter LUKS Passphrase"`
 						else splash_off
 							echo
 							echo -e "${extd}Need to unlock encrypted volumes${norm}"
